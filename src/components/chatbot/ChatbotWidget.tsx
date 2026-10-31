@@ -178,7 +178,7 @@ export default function ChatbotWidget() {
                 <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
                   <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
                 </div>
-                <span>Asisten sedang mengetik…</span>
+                <span>Asisten sedang mengetikk…</span>
               </div>
             )}
             <div ref={bottomRef} />
