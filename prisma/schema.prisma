@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================================
+// ENUMS (SQLite stores these as TEXT with validation in app)
+// ===========================================================
+
+// model Role mapped as string enum
+// Values: MASYARAKAT | PETUGAS | ADMIN
+
+// model DamageLevel mapped as string enum
+// Values: UNKNOWN | RINGAN | SEDANG | BERAT | KRITIS
+
+// model Priority mapped as string enum
+// Values: RENDAH | SEDANG | TINGGI | KRITIS
+
+// model ReportStatus mapped as string enum
+// Values: MENUNGGU_VERIFIKASI | DIPROSES_AI | DITERIMA | DITOLAK | DITUGASKAN | SEDANG_DIPERBAIKI | SELESAI
+
+// model ImageType mapped as string enum
+// Values: KERUSAKAN | BUKTI_PERBAIKAN
+
+// ===========================================================
+// USER
+// ===========================================================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("MASYARAKAT") // MASYARAKAT | PETUGAS | ADMIN
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  reports            Report[]              @relation("Pelapor")
+  assignments        Report[]              @relation("PetugasDitugaskan")
+  statusUpdates      ReportStatusHistory[]
+  notifications      Notification[]
+  telegramLink       TelegramLink?
+  telegramLinkTokens TelegramLinkToken[]
+
+  @@map("users")
+}
+
+// ===========================================================
+// FACILITY TYPE
+// ===========================================================
+
+model FacilityType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  reports Report[]
+
+  @@map("facility_types")
+}
+
+// ===========================================================
+// REPORT
+// ===========================================================
+
+model Report {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  damageType  String?  @map("damage_type") // Jenis kerusakan spesifik (teks bebas/AI)
+  damageLevel String   @default("UNKNOWN") @map("damage_level") // UNKNOWN | RINGAN | SEDANG | BERAT | KRITIS
+  priority    String   @default("RENDAH") @map("priority") // RENDAH | SEDANG | TINGGI | KRITIS
+  latitude    Float?
+  longitude   Float?
+  address     String
+  status      String   @default("MENUNGGU_VERIFIKASI") // MENUNGGU_VERIFIKASI | DIPROSES_AI | DITERIMA | DITOLAK | DITUGASKAN | SEDANG_DIPERBAIKI | SELESAI
+  aiAnalysis  String?  @map("ai_analysis") // JSON: { category, damageLevel, priority, reasoning }
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Foreign keys
+  userId         String  @map("user_id")
+  assignedTo     String? @map("assigned_to")
+  facilityTypeId String  @map("facility_type_id")
+
+  // Relations
+  user          User                  @relation("Pelapor", fields: [userId], references: [id])
+  assignee      User?                 @relation("PetugasDitugaskan", fields: [assignedTo], references: [id])
+  facilityType  FacilityType          @relation(fields: [facilityTypeId], references: [id])
+  images        ReportImage[]
+  statusHistory ReportStatusHistory[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([userId])
+  @@index([assignedTo])
+  @@index([facilityTypeId])
+  @@map("reports")
+}
+
+// ===========================================================
+// REPORT IMAGE
+// ===========================================================
+
+model ReportImage {
+  id        String   @id @default(cuid())
+  imagePath String   @map("image_path")
+  imageType String   @default("KERUSAKAN") @map("image_type") // KERUSAKAN | BUKTI_PERBAIKAN
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Foreign keys
+  reportId String @map("report_id")
+
+  // Relations
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("report_images")
+}
+
+// ===========================================================
+// REPORT STATUS HISTORY
+// ===========================================================
+
+model ReportStatusHistory {
+  id        String   @id @default(cuid())
+  status    String // Snapshot status saat perubahan terjadi
+  note      String? // Catatan perubahan (opsional)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Foreign keys
+  reportId    String @map("report_id")
+  updatedById String @map("updated_by")
+
+  // Relations
+  report    Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  updatedBy User   @relation(fields: [updatedById], references: [id])
+
+  @@map("report_status_histories")
+}
+
+// ===========================================================
+// NOTIFICATION
+// ===========================================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?
+  // Kunci idempotensi per penerima, mis. "report-created:<id>:<userId>".
+  // NULL diizinkan berulang pada SQLite; nilai unik mencegah notifikasi ganda.
+  eventKey  String?  @unique @map("event_key")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+// ===========================================================
+// TELEGRAM LINK (satu akun aplikasi <-> satu chat Telegram)
+// ===========================================================
+
+model TelegramLink {
+  id          String   @id @default(cuid())
+  // Chat ID hanya disimpan setelah diverifikasi lewat webhook.
+  chatId      String   @unique @map("chat_id")
+  username    String?  @map("telegram_username")
+  connectedAt DateTime @default(now()) @map("connected_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([connectedAt])
+  @@map("telegram_links")
+}
+
+// ===========================================================
+// TELEGRAM LINK TOKEN (sekali pakai, kedaluwarsa, disimpan sebagai hash)
+// ===========================================================
+
+model TelegramLinkToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("telegram_link_tokens")
+}
+
+// ===========================================================
+// TELEGRAM OUTBOX (antrean pengiriman + retry + deduplikasi)
+// ===========================================================
+
+model TelegramOutbox {
+  id            String    @id @default(cuid())
+  dedupeKey     String    @unique @map("dedupe_key")
+  chatId        String    @map("chat_id")
+  message       String
+  // PENDING | PROCESSING | SENT | FAILED
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  lastError     String?   @map("last_error")
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  sentAt        DateTime? @map("sent_at")
+  userId        String?   @map("user_id")
+
+  @@index([status, nextAttemptAt])
+  @@index([userId])
+  @@map("telegram_outbox")
+}
