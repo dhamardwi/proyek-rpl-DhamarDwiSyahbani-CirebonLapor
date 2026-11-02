@@ -50,6 +50,9 @@ function makeData(overrides: Partial<ChatbotDbData> = {}): ChatbotDbData {
       { status: "MENUNGGU_VERIFIKASI", count: 1 },
     ],
     taskByStatus: [],
+    byPriority: [{ priority: "KRITIS", count: 1 }],
+    mineByPriority: [{ priority: "KRITIS", count: 2 }],
+    taskByPriority: [{ priority: "KRITIS", count: 1 }],
     facilityTypes: [{ name: "Jalan", reports: 7 }],
     myNotifications: [{ title: "Laporan diverifikasi", isRead: false }],
     recent: null,
@@ -313,6 +316,36 @@ test("petugas mendapat hitungan tugas yang spesifik", () => {
   assert.equal(
     answerDataQuestion("Ada berapa laporan yang sudah selesai?", data, "PETUGAS"),
     "Laporan Anda yang sudah selesai ada 1."
+  );
+});
+
+test("jumlah laporan per prioritas dijawab spesifik untuk semua peran", () => {
+  const data = makeData();
+
+  assert.equal(
+    answerDataQuestion("Berapa laporan yang kritis?", data, "ADMIN"),
+    "Laporan yang berprioritas KRITIS ada 1."
+  );
+  assert.equal(
+    answerDataQuestion("Berapa laporan saya yang kritis?", data, "MASYARAKAT"),
+    "Laporan Anda yang berprioritas KRITIS ada 2."
+  );
+  assert.equal(
+    answerDataQuestion("Berapa tugas yang kritis?", data, "PETUGAS"),
+    "Tugas yang berprioritas KRITIS ada 1."
+  );
+});
+
+test("jumlah laporan tanpa status spesifik dijawab total milik scope", () => {
+  const data = makeData();
+
+  assert.equal(
+    answerDataQuestion("Berapa laporan yang ada?", data, "ADMIN"),
+    "Laporan ada 10."
+  );
+  assert.equal(
+    answerDataQuestion("Berapa laporan saya ada?", data, "MASYARAKAT"),
+    "Laporan Anda ada 3."
   );
 });
 

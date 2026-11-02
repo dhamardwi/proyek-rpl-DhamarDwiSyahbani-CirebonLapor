@@ -78,6 +78,12 @@ export interface ChatbotDbData {
   mineByStatus: { status: string; count: number }[];
   /** Jumlah tugas milik petugas per status (PETUGAS). */
   taskByStatus: { status: string; count: number }[];
+  /** Jumlah laporan per prioritas (agregat global). */
+  byPriority?: { priority: string; count: number }[];
+  /** Jumlah laporan milik user per prioritas (MASYARAKAT). */
+  mineByPriority?: { priority: string; count: number }[];
+  /** Jumlah tugas milik petugas per prioritas (PETUGAS). */
+  taskByPriority?: { priority: string; count: number }[];
   /** Jumlah laporan per jenis fasilitas (agregat global). */
   facilityTypes: { name: string; reports: number }[];
   /** Notifikasi terbaru milik user (MASYARAKAT). */
@@ -225,6 +231,24 @@ export async function getChatbotDbData(
         : Promise.resolve([]),
     ]);
 
+    const [byPriority, mineByPriorityRows, taskByPriorityRows] = await Promise.all([
+      db.report.groupBy({ by: ["priority"], _count: { priority: true } }),
+      role === "MASYARAKAT"
+        ? db.report.groupBy({
+            by: ["priority"],
+            where: { userId },
+            _count: { priority: true },
+          })
+        : Promise.resolve([]),
+      role === "PETUGAS"
+        ? db.report.groupBy({
+            by: ["priority"],
+            where: { assignedTo: userId },
+            _count: { priority: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
     const [profileRow, unreadNotifications] = await Promise.all([
       db.user.findUnique({
         where: { id: userId },
@@ -294,6 +318,18 @@ export async function getChatbotDbData(
       taskByStatus: taskByStatusRows.map((s) => ({
         status: s.status,
         count: s._count.status,
+      })),
+      byPriority: byPriority.map((s) => ({
+        priority: s.priority,
+        count: s._count.priority,
+      })),
+      mineByPriority: mineByPriorityRows.map((s) => ({
+        priority: s.priority,
+        count: s._count.priority,
+      })),
+      taskByPriority: taskByPriorityRows.map((s) => ({
+        priority: s.priority,
+        count: s._count.priority,
       })),
       facilityTypes: facilityTypes.map((f) => ({
         name: f.name,
@@ -574,6 +610,16 @@ export function answerChatbotIdentity(
 }
 
 /**
+ * Prioritas kerusakan yang bisa ditanyakan.
+ */
+const PRIORITY_KEYWORDS: { pattern: RegExp; key: string; label: string }[] = [
+  { pattern: /kritis/, key: "KRITIS", label: "KRITIS" },
+  { pattern: /tinggi/, key: "TINGGI", label: "TINGGI" },
+  { pattern: /sedang/, key: "SEDANG", label: "SEDANG" },
+  { pattern: /rendah/, key: "RENDAH", label: "RENDAH" },
+];
+
+/**
  * Hitungan spesifik per status laporan, disesuaikan dengan peran:
  * ADMIN = seluruh laporan, PETUGAS = laporan yang ditugaskan kepadanya,
  * MASYARAKAT = laporan miliknya.
@@ -651,7 +697,157 @@ export function answerStatusCountQuestion(
     }
   }
 
+  // Pertanyaan lain (pengguna/verifikasi/akun) → handler khusus.
+  if (/pengguna|user|akun|profil|verifikasi/.test(q)) return null;
+
+  // Jumlah per prioritas kerusakan.
+  const priorityRows =
+    role === "ADMIN"
+      ? (data.byPriority ?? []).map((row) => ({ key: row.priority, count: row.count }))
+      : role === "PETUGAS"
+        ? (data.taskByPriority ?? []).map((row) => ({ key: row.priority, count: row.count }))
+        : (data.mineByPriority ?? []).map((row) => ({ key: row.priority, count: row.count }));
+  const matchedPriority = PRIORITY_KEYWORDS.find((p) => p.pattern.test(q));
+  if (matchedPriority) {
+    const count = priorityRows
+      .filter((row) => row.key === matchedPriority.key)
+      .reduce((sum, row) => sum + row.count, 0);
+    const targetNoun =
+      role === "PETUGAS" && /\btugas\b/.test(q)
+        ? "Tugas yang berprioritas "
+        : role === "ADMIN"
+          ? "Laporan yang berprioritas "
+          : "Laporan Anda yang berprioritas ";
+    return `${targetNoun}${matchedPriority.label} ada ${count}.`;
+  }
+
+  // Pertanyaan jumlah laporan tanpa status/prioritas spesifik → jawab total milik scope.
+  const STATUS_KEYWORD =
+    /menunggu verifikasi|sedang diperbaiki|diperbaiki|diproses ai|ditolak|ditugaskan|diterima|selesai|belum selesai|prioritas|kritis|tinggi|sedang|rendah|berat|ringan/;
+  if (/berapa|jumlah|total/.test(q) && !STATUS_KEYWORD.test(q)) {
+    const total = role === "ADMIN" ? data.total : (data.profile?.reportCount ?? data.mine.length);
+    return `${noun} ada ${total}.`;
+  }
+
   return null;
+}
+
+/**
+ * Hitungan status untuk user tertentu (sesuai peran):
+ * - PETUGAS → tugas/penugasan milik user tersebut.
+ * - Masyarakah/Admin → laporan milik user tersebut.
+ * Dipakai ketika pengguna menanyakan sesuai nama card user tertentu.
+ */
+export async function answerUserStatusCount(
+  message: string,
+  role: ChatbotRole,
+  userId: string,
+  asPetugas: boolean
+): Promise<string | null> {
+  const q = normalizeQuestion(message);
+  const noun =
+    asPetugas || (role === "PETUGAS" && /\btugas\b/.test(q))
+      ? "Tugas"
+      : role === "ADMIN"
+        ? "Laporan"
+        : "Laporan Anda";
+
+  if (!/berapa|jumlah|total/.test(q)) return null;
+  // Pertanyaan durasi/waktu bukan pertanyaan jumlah.
+  if (/berapa lama|kapan|estimasi|berapa hari|sampai kapan|lamanya|prosesnya/.test(q)) {
+    return null;
+  }
+  // Ditangani khusus oleh jawaban admin (bukan status tunggal).
+  if (/belum ditugaskan|siap ditugaskan|sudah diverifikasi|telah diverifikasi|terverifikasi/.test(q)) {
+    return null;
+  }
+
+  const rows = asPetugas
+    ? await db.report.groupBy({
+        by: ["status"],
+        where: { assignedTo: userId },
+        _count: { status: true },
+      })
+    : await db.report.groupBy({ by: ["status"], where: { userId }, _count: { status: true } });
+
+  const statusRows = rows.map((r) => ({ status: r.status, count: r._count.status }));
+
+  if (/belum selesai/.test(q)) {
+    const total = asPetugas
+      ? await db.report.count({ where: { assignedTo: userId } })
+      : await db.report.count({ where: { userId } });
+    const selesai = countStatuses(statusRows, ["SELESAI"]);
+    return `${noun} yang belum selesai ada ${total - selesai}.`;
+  }
+
+  for (const group of STATUS_COUNT_GROUPS) {
+    if (group.key.test(q)) {
+      return `${noun} yang ${group.label} ada ${countStatuses(statusRows, group.statuses)}.`;
+    }
+  }
+
+  const priorityRows = asPetugas
+    ? (await db.report.groupBy({
+        by: ["priority"],
+        where: { assignedTo: userId },
+        _count: { priority: true },
+      })).map((r) => ({ key: r.priority, count: r._count.priority }))
+    : (await db.report.groupBy({
+        by: ["priority"],
+        where: { userId },
+        _count: { priority: true },
+      })).map((r) => ({ key: r.priority, count: r._count.priority }));
+  const matchedPriority = PRIORITY_KEYWORDS.find((p) => p.pattern.test(q));
+  if (matchedPriority) {
+    const count = priorityRows
+      .filter((row) => row.key === matchedPriority.key)
+      .reduce((sum, row) => sum + row.count, 0);
+    return `${noun} yang berprioritas ${matchedPriority.label} ada ${count}.`;
+  }
+
+  // Pertanyaan jumlah laporan tanpa status/prioritas spesifik → jawab total milik scope.
+  const STATUS_KEYWORD =
+    /menunggu verifikasi|sedang diperbaiki|diperbaiki|diproses ai|ditolak|ditugaskan|diterima|selesai|belum selesai|prioritas|kritis|tinggi|sedang|rendah|berat|ringan/;
+  if (/berapa|jumlah|total/.test(q) && !STATUS_KEYWORD.test(q)) {
+    const total = asPetugas
+      ? await db.report.count({ where: { assignedTo: userId } })
+      : await db.report.count({ where: { userId } });
+    return `${noun} ada ${total}.`;
+  }
+
+  return null;
+}
+
+/** Pola nama user/petugas + nomor, mis. "masyarakat 1", "petugas 2". */
+const USER_REF_PATTERN =
+  /(?:masyarakat|warga|user|orang|penduduk|pengguna|pemerintah desa|desa|petugas|operator|babinsa|tukang)\s+(\d+)/;
+
+/**
+ * Cari user/petugas berdasarkan nomor pada pertanyaan (mis. "masyarakat 1").
+ * Dipakai agar statistik dijawab dari data user/petugas yang ditanyakan,
+ * bukan dari data user yang sedang login (agar tidak bocor antar user).
+ */
+export async function resolveUserRef(
+  message: string
+): Promise<{ userId: string; asPetugas: boolean } | null> {
+  const q = normalizeQuestion(message);
+  const m = q.match(USER_REF_PATTERN);
+  if (!m) return null;
+
+  const n = Number(m[1]);
+  const asPetugas = /petugas/.test(m[0]);
+  const refRole = asPetugas ? "PETUGAS" : "MASYARAKAH";
+  const users = await db.user.findMany({
+    where: { role: refRole },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+    skip: Math.max(0, n - 1),
+    take: 1,
+  });
+  const user = users[0];
+  if (!user) return null;
+
+  return { userId: user.id, asPetugas };
 }
 
 /**

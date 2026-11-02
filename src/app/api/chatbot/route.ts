@@ -12,6 +12,8 @@ import {
   answerDataQuestion,
   answerRoleScopeQuestion,
   answerChatbotIdentity,
+  answerUserStatusCount,
+  resolveUserRef,
   type ChatbotRole,
 } from "@/lib/chatbot-context";
 
@@ -103,8 +105,13 @@ export async function POST(req: NextRequest) {
     // Jawaban berbasis data aktual. Jika tersedia, dipakai langsung agar
     // jawaban spesifik dan tidak melebar ke topik lain.
     const identityReply = answerChatbotIdentity(lastUserMessage, role);
+    const userRef = role === "ADMIN" ? await resolveUserRef(lastUserMessage) : null;
+    const userReply = userRef
+      ? await answerUserStatusCount(lastUserMessage, role, userRef.userId, userRef.asPetugas)
+      : null;
     const dataReply =
       identityReply ??
+      userReply ??
       (dbData
         ? answerDataQuestion(lastUserMessage, dbData, role)
         : answerRoleScopeQuestion(lastUserMessage, role));
