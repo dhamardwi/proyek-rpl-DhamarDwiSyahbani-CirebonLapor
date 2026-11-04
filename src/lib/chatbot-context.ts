@@ -126,13 +126,53 @@ export async function getChatbotDbData(
   try {
     const withRecent = wantsDbData(lastUserMessage);
 
-    const [total, menunggu, selesai, kritis, byStatus] = await Promise.all([
-      db.report.count(),
-      db.report.count({ where: { status: "MENUNGGU_VERIFIKASI" } }),
-      db.report.count({ where: { status: "SELESAI" } }),
-      db.report.count({ where: { priority: "KRITIS" } }),
-      db.report.groupBy({ by: ["status"], _count: { status: true } }),
-    ]);
+    // --- Hitung total/menunggu/selesai/kritis berdasarkan role ---
+    let total, menunggu, selesai, kritis;
+    let byStatusRows: { status: string; count: number }[];
+
+    if (role === "ADMIN") {
+      total = await db.report.count();
+      menunggu = await db.report.count({ where: { status: "MENUNGGU_VERIFIKASI" } });
+      selesai = await db.report.count({ where: { status: "SELESAI" } });
+      kritis = await db.report.count({ where: { priority: "KRITIS" } });
+      byStatusRows = (await db.report.groupBy({ by: ["status"], _count: { status: true } })).map(
+        (s) => ({ status: s.status, count: s._count.status })
+      );
+    } else if (role === "PETUGAS") {
+      const assignedTo = userId;
+      total = await db.report.count({ where: { assignedTo: assignedTo } });
+      menunggu = await db.report.count({
+        where: { assignedTo: assignedTo, status: "MENUNGGU_VERIFIKASI" },
+      });
+      selesai = await db.report.count({
+        where: { assignedTo: assignedTo, status: "SELESAI" },
+      });
+      kritis = await db.report.count({
+        where: { assignedTo: assignedTo, priority: "KRITIS" },
+      });
+      byStatusRows = (await db.report.groupBy({
+        by: ["status"],
+        where: { assignedTo: assignedTo },
+        _count: { status: true },
+      })).map((s) => ({ status: s.status, count: s._count.status }));
+    } else {
+      // Masyarakah
+      total = await db.report.count({ where: { userId } });
+      menunggu = await db.report.count({
+        where: { userId, status: "MENUNGGU_VERIFIKASI" },
+      });
+      selesai = await db.report.count({
+        where: { userId, status: "SELESAI" },
+      });
+      kritis = await db.report.count({
+        where: { userId, priority: "KRITIS" },
+      });
+      byStatusRows = (await db.report.groupBy({
+        by: ["status"],
+        where: { userId },
+        _count: { status: true },
+      })).map((s) => ({ status: s.status, count: s._count.status }));
+    }
 
     const [mine, tasks, recent, facilityTypes, myNotifications] = await Promise.all([
       role === "MASYARAKAT"
@@ -216,36 +256,38 @@ export async function getChatbotDbData(
 
     const [mineByStatusRows, taskByStatusRows] = await Promise.all([
       role === "MASYARAKAT"
-        ? db.report.groupBy({
+        ? (await db.report.groupBy({
             by: ["status"],
             where: { userId },
             _count: { status: true },
-          })
+          })).map((s) => ({ status: s.status, count: s._count.status }))
         : Promise.resolve([]),
       role === "PETUGAS"
-        ? db.report.groupBy({
+        ? (await db.report.groupBy({
             by: ["status"],
             where: { assignedTo: userId },
             _count: { status: true },
-          })
+          })).map((s) => ({ status: s.status, count: s._count.status }))
         : Promise.resolve([]),
     ]);
 
     const [byPriority, mineByPriorityRows, taskByPriorityRows] = await Promise.all([
-      db.report.groupBy({ by: ["priority"], _count: { priority: true } }),
+      (await db.report.groupBy({ by: ["priority"], _count: { priority: true } })).map(
+        (s) => ({ priority: s.priority, count: s._count.priority })
+      ),
       role === "MASYARAKAT"
-        ? db.report.groupBy({
+        ? (await db.report.groupBy({
             by: ["priority"],
             where: { userId },
             _count: { priority: true },
-          })
+          })).map((s) => ({ priority: s.priority, count: s._count.priority }))
         : Promise.resolve([]),
       role === "PETUGAS"
-        ? db.report.groupBy({
+        ? (await db.report.groupBy({
             by: ["priority"],
             where: { assignedTo: userId },
             _count: { priority: true },
-          })
+          })).map((s) => ({ priority: s.priority, count: s._count.priority }))
         : Promise.resolve([]),
     ]);
 
@@ -310,26 +352,26 @@ export async function getChatbotDbData(
       kritis,
       mine,
       tasks,
-      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.status })),
+      byStatus: byStatusRows.map((s) => ({ status: s.status, count: s.count })),
       mineByStatus: mineByStatusRows.map((s) => ({
         status: s.status,
-        count: s._count.status,
+        count: s.count,
       })),
       taskByStatus: taskByStatusRows.map((s) => ({
         status: s.status,
-        count: s._count.status,
+        count: s.count,
       })),
       byPriority: byPriority.map((s) => ({
         priority: s.priority,
-        count: s._count.priority,
+        count: s.count,
       })),
       mineByPriority: mineByPriorityRows.map((s) => ({
         priority: s.priority,
-        count: s._count.priority,
+        count: s.count,
       })),
       taskByPriority: taskByPriorityRows.map((s) => ({
         priority: s.priority,
-        count: s._count.priority,
+        count: s.count,
       })),
       facilityTypes: facilityTypes.map((f) => ({
         name: f.name,
