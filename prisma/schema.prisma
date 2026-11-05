@@ -37,6 +37,9 @@ model User {
   password  String
   role      String   @default("MASYARAKAT") // MASYARAKAT | PETUGAS | ADMIN
   isActive  Boolean  @default(true) @map("is_active")
+  phone     String?  @map("phone")
+  address   String?  @map("address")
+  profileImage String? @map("profile_image")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

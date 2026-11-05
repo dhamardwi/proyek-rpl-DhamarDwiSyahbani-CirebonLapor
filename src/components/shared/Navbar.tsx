@@ -30,6 +30,13 @@ export default function Navbar() {
                 >
                   <Settings className="w-5 h-5" />
                 </Link>
+                <Link
+                  href={`/dashboard/${session.user?.role?.toLowerCase()}/profile`}
+                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                  title="Manajemen Profil"
+                >
+                  <UserIcon className="w-5 h-5" />
+                </Link>
                 <NotificationDropdown />
                 <div className="flex items-center gap-2">
                   <UserIcon className="w-5 h-5 text-gray-500" />
