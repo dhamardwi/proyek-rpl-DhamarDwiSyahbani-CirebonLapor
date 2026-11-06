@@ -89,7 +89,7 @@ export default function AdminReportActionForm({
     }
   };
 
-  const actionButtons: { label: string; icon: React.ElementType; condition: boolean; variant: string; action: "VERIFY" | "REJECT" | "ASSIGN" | "PRIORITY" }[] = [
+  const actionButtons: { label: string; icon: React.ElementType; condition: boolean; variant: "default" | "danger"; action: "VERIFY" | "REJECT" | "ASSIGN" | "PRIORITY" }[] = [
     {
       label: "Verifikasi Laporan",
       icon: CheckCircle2,
@@ -101,7 +101,7 @@ export default function AdminReportActionForm({
       label: "Tolak Laporan",
       icon: XCircle,
       condition: ["MENUNGGU_VERIFIKASI", "DIPROSES_AI", "DITERIMA"].includes(currentStatus),
-      variant: "destructive",
+      variant: "danger",
       action: "REJECT",
     },
     {
@@ -152,7 +152,7 @@ export default function AdminReportActionForm({
                 onClick={() => setAction(btn.action)}
                 variant={isActive ? btn.variant : "outline"}
                 className={isActive
-                  ? btn.variant === "destructive"
+                  ? btn.variant === "danger"
                     ? "bg-red-600 text-white"
                     : btn.variant === "default"
                       ? "bg-blue-600 text-white"
