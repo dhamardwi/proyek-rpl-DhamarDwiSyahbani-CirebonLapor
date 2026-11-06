@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Lock, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface PasswordFormProps {
   isLoading: boolean;
@@ -17,6 +22,7 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: session } = useSession();
 
@@ -37,6 +43,7 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setServerError(null);
 
     const newErrors: Record<string, string> = {};
 
@@ -77,7 +84,6 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 5000);
       } else {
-        // Map error messages to specific fields
         const msg = data.message || "Gagal mengubah password";
         if (msg.includes("saat ini")) {
           setErrors({ currentPassword: msg });
@@ -86,102 +92,98 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
         } else if (msg.includes("Konfirmasi")) {
           setErrors({ confirmPassword: msg });
         } else {
-          setErrors({ _form: msg });
+          setServerError(msg);
         }
       }
     } catch {
-      setErrors({ _form: "Terjadi kesalahan server" });
+      setServerError("Terjadi kesalahan server");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 mb-4">
-          <CheckCircle className="w-5 h-5" />
-          <span>Password berhasil diubah. Silakan login lagi dengan password baru.</span>
-        </div>
-      )}
-      {errors._form && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 mb-4">
-          <AlertCircle className="w-5 h-5" />
-          <span>{errors._form}</span>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Password Saat Ini
-        </label>
-        <input
-          name="currentPassword"
-          type="password"
-          value={formData.currentPassword}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 rounded-lg border ${
-            errors.currentPassword ? "border-red-500" : "border-slate-300"
-          } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-          disabled={isLoading || isSubmitting}
-        />
-        {errors.currentPassword && (
-          <p className="text-xs text-red-600 mt-1">{errors.currentPassword}</p>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Ubah Password
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {serverError && (
+          <Alert variant="destructive">
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
         )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Password Baru
-        </label>
-        <input
-          name="newPassword"
-          type="password"
-          value={formData.newPassword}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 rounded-lg border ${
-            errors.newPassword ? "border-red-500" : "border-slate-300"
-          } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-          disabled={isLoading || isSubmitting}
-        />
-        {errors.newPassword && (
-          <p className="text-xs text-red-600 mt-1">{errors.newPassword}</p>
+        {success && (
+          <Alert variant="success">
+            <CheckCircle className="w-4 h-4" />
+            <AlertDescription>Password berhasil diubah. Silakan login lagi dengan password baru.</AlertDescription>
+          </Alert>
         )}
-      </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="pwd-current">Password Saat Ini</Label>
+            <Input
+              id="pwd-current"
+              name="currentPassword"
+              type="password"
+              value={formData.currentPassword}
+              onChange={handleChange}
+              className={`w-full ${errors.currentPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              disabled={isLoading || isSubmitting}
+            />
+            {errors.currentPassword && (
+              <p className="text-[10px] text-red-600 mt-1">{errors.currentPassword}</p>
+            )}
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Konfirmasi Password Baru
-        </label>
-        <input
-          name="confirmPassword"
-          type="password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          className={`w-full px-3 py-2 rounded-lg border ${
-            errors.confirmPassword ? "border-red-500" : "border-slate-300"
-          } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-          disabled={isLoading || isSubmitting}
-        />
-        {errors.confirmPassword && (
-          <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
-        )}
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="pwd-new">Password Baru</Label>
+            <Input
+              id="pwd-new"
+              name="newPassword"
+              type="password"
+              value={formData.newPassword}
+              onChange={handleChange}
+              className={`w-full ${errors.newPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              disabled={isLoading || isSubmitting}
+            />
+            {errors.newPassword && (
+              <p className="text-[10px] text-red-600 mt-1">{errors.newPassword}</p>
+            )}
+          </div>
 
-      <div className="pt-3">
-        <button
-          type="submit"
-          disabled={isLoading || isSubmitting || !session?.user}
-          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {isSubmitting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Lock className="w-4 h-4" />
-          )}
-          <span>{isSubmitting ? "Mengubah..." : "Ubah Password"}</span>
-        </button>
-      </div>
-    </form>
+          <div className="space-y-2">
+            <Label htmlFor="pwd-confirm">Konfirmasi Password Baru</Label>
+            <Input
+              id="pwd-confirm"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className={`w-full ${errors.confirmPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              disabled={isLoading || isSubmitting}
+            />
+            {errors.confirmPassword && (
+              <p className="text-[10px] text-red-600 mt-1">{errors.confirmPassword}</p>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isLoading || isSubmitting || !session?.user}
+            className="w-full py-2.5 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Lock className="w-4 h-4" />
+            )}
+            <span>{isSubmitting ? "Mengubah..." : "Ubah Password"}</span>
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

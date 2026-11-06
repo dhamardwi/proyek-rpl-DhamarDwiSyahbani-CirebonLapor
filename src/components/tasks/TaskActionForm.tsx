@@ -3,6 +3,13 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Wrench, CheckCircle2, AlertCircle, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface TaskActionFormProps {
   reportId: string;
@@ -80,136 +87,139 @@ export default function TaskActionForm({ reportId, currentStatus }: TaskActionFo
     return null;
   }
 
+  const statusVariant = currentStatus === "DITUGASKAN" ? "warning" : "success";
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <Wrench className="w-4 h-4 text-slate-400" />
-        Aksi Perbaikan
-      </h3>
+    <Card>
+      <CardHeader className="pb-3 flex items-center gap-2">
+        <Wrench className="w-3.5 h-3.5 text-slate-400" />
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Aksi Perbaikan
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="w-4 h-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4" role="alert">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
+        {success && (
+          <Alert variant="success">
+            <CheckCircle2 className="w-4 h-4" />
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
 
-      {success && (
-        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3 mb-4">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          {success}
-        </div>
-      )}
-
-      {/* Status DITUGASKAN → Mulai Perbaikan */}
-      {currentStatus === "DITUGASKAN" && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Anda bisa memulai perbaikan dengan mengklik tombol di bawah ini. Opsional, tambahkan catatan awal.
-          </p>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Catatan (opsional)</label>
-            <textarea
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Misalnya: Sudah survei lokasi, mulai dikerjakan besok pagi..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm resize-none"
-            />
+        {/* Status DITUGASKAN → Mulai Perbaikan */}
+        {currentStatus === "DITUGASKAN" && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Anda bisa memulai perbaikan dengan mengklik tombol di bawah ini. Opsional, tambahkan catatan awal.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="task-note">Catatan (opsional)</Label>
+              <Textarea
+                id="task-note"
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Misalnya: Sudah survei lokasi, mulai dikerjakan besok pagi..."
+              />
+            </div>
+            <Button
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleSubmit("SEDANG_DIPERBAIKI")}
+              className="w-full py-3 shadow-sm shadow-orange-100 hover:shadow-orange-200"
+            >
+              {isLoading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Wrench className="w-4 h-4" />
+              )}
+              Mulai Perbaikan
+            </Button>
           </div>
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => handleSubmit("SEDANG_DIPERBAIKI")}
-            className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-semibold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            {isLoading ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Wrench className="w-4 h-4" />
-            )}
-            Mulai Perbaikan
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Status SEDANG_DIPERBAIKI → Selesaikan Perbaikan */}
-      {currentStatus === "SEDANG_DIPERBAIKI" && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Unggah foto bukti perbaikan dan tambahkan catatan penyelesaian untuk menyelesaikan tugas ini.
-          </p>
+        {/* Status SEDANG_DIPERBAIKI → Selesaikan Perbaikan */}
+        {currentStatus === "SEDANG_DIPERBAIKI" && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Unggah foto bukti perbaikan dan tambahkan catatan penyelesaian untuk menyelesaikan tugas ini.
+            </p>
 
-          {/* Upload Foto Bukti */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Foto Bukti Perbaikan *
-            </label>
+            {/* Upload Foto Bukti */}
+            <div className="space-y-2">
+              <Label htmlFor="task-image">Foto Bukti Perbaikan <span className="text-red-500">*</span></Label>
 
-            {imagePreview ? (
-              <div className="relative rounded-xl overflow-hidden border border-slate-200 inline-block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="Preview Bukti" className="h-48 w-auto object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImage(null);
-                    setImagePreview(null);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                  }}
-                  className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white p-1.5 rounded-lg backdrop-blur-sm transition-colors text-xs font-medium"
-                >
-                  Hapus
-                </button>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-40 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 hover:border-green-400 transition-all flex flex-col items-center justify-center cursor-pointer text-slate-500 group"
-              >
-                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
-                  <ImageIcon className="w-5 h-5 text-slate-400 group-hover:text-green-500" />
+              {imagePreview ? (
+                <div className="relative rounded-lg overflow-hidden border border-slate-200 inline-block">
+                  <img src={imagePreview} alt="Preview Bukti" className="h-48 w-auto object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImage(null);
+                      setImagePreview(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white p-1.5 rounded-lg backdrop-blur-sm transition-colors text-xs font-medium"
+                  >
+                    Hapus
+                  </button>
                 </div>
-                <p className="text-sm font-medium text-slate-700">Klik untuk unggah bukti</p>
-                <p className="text-xs text-slate-400 mt-1">JPG/PNG, maks 5MB</p>
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg, image/png, image/jpg"
-              className="hidden"
-              onChange={handleImageChange}
-            />
-          </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-40 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 hover:border-green-400 transition-all flex flex-col items-center justify-center cursor-pointer text-slate-500 group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform">
+                    <ImageIcon className="w-5 h-5 text-slate-400 group-hover:text-green-500" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-700">Klik untuk unggah bukti</p>
+                  <p className="text-xs text-slate-400 mt-1">JPG/PNG, maks 5MB</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                id="task-image"
+                type="file"
+                accept="image/jpeg, image/png, image/jpg"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </div>
 
-          {/* Catatan Penyelesaian */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Catatan Penyelesaian (opsional)</label>
-            <textarea
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Misalnya: Jalan sudah ditambal dan dirapikan, perlu waktu 2 hari untuk mengeras sempurna..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm resize-none"
-            />
-          </div>
+            {/* Catatan Penyelesaian */}
+            <div className="space-y-2">
+              <Label htmlFor="task-completion-note">Catatan Penyelesaian (opsional)</Label>
+              <Textarea
+                id="task-completion-note"
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Misalnya: Jalan sudah ditambal dan dirapikan, perlu waktu 2 hari untuk mengeras sempurna..."
+              />
+            </div>
 
-          <button
-            type="button"
-            disabled={isLoading}
-            onClick={() => handleSubmit("SELESAI")}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
-          >
-            {isLoading ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4" />
-            )}
-            Selesaikan Perbaikan
-          </button>
-        </div>
-      )}
-    </div>
+            <Button
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleSubmit("SELESAI")}
+              className="w-full py-3 shadow-sm shadow-green-100 hover:shadow-green-200"
+            >
+              {isLoading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              Selesaikan Perbaikan
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
