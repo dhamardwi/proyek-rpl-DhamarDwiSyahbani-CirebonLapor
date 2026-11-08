@@ -17,6 +17,7 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
   const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const role = session?.user?.role as string | undefined;
   const isLoading = status === "loading";
@@ -24,6 +25,7 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
   const handleLogout = () => {
     signOut();
     setIsUserMenuOpen(false);
+    setIsMobileOpen(false);
   };
 
   return (
@@ -31,13 +33,18 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-[var(--layout-z-overlay)] bg-slate-900/60 backdrop-blur-sm lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+      />
 
       {/* Main content area */}
       <div className={cn("flex-1 flex flex-col relative", isMobileOpen ? "overflow-hidden" : "")}>

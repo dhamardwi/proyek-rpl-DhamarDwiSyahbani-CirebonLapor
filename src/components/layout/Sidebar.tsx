@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  ChevronRight,
   ShieldCheck,
   Wrench,
 } from "lucide-react";
@@ -22,6 +23,13 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   roles: ("ADMIN" | "PETUGAS" | "MASYARAKAT")[];
+}
+
+interface SidebarProps {
+  isCollapsed: boolean;
+  setIsCollapsed: (val: boolean) => void;
+  isMobileOpen: boolean;
+  setIsMobileOpen: (val: boolean) => void;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -90,18 +98,21 @@ const USER_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({
+  isCollapsed,
+  setIsCollapsed,
+  isMobileOpen,
+  setIsMobileOpen,
+}: SidebarProps) {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   const role = session?.user?.role as
     | "ADMIN"
     | "PETUGAS"
     | "MASYARAKAT"
     | undefined;
-  const isLoggedIn = status === "authenticated" && !!role;
 
   const navItems = useMemo(
     () => NAV_ITEMS.filter((item) => item.roles.includes(role!)),
@@ -120,52 +131,101 @@ export default function Sidebar() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
+  // Track window size
   useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
+    const updateSize = () => {
+      setIsDesktop(typeof window !== "undefined" ? window.innerWidth >= 1024 : true);
+    };
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (!isDesktop) {
+      setIsMobileOpen(false);
+    }
+  }, [pathname, isDesktop]);
 
   const handleLogout = () => {
     setIsMobileOpen(false);
   };
 
-  const isDesktop = typeof window !== "undefined" ? window.innerWidth >= 1024 : true;
-
-  const sidebarClasses = cn(
-    "fixed left-0 top-0 z-40 h-full bg-white border-r border-slate-200 transition-all duration-300",
-    isCollapsed ? "w-16" : "w-64",
-    isDesktop || isMobileOpen ? "translate-x-0" : "-translate-x-full"
-  );
+  // Sidebar width classes based on collapsed state
+  const sidebarWidth = isCollapsed
+    ? "var(--layout-sidebar-collapsed-width)"
+    : "var(--layout-sidebar-width)";
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay backdrop */}
       {!isDesktop && isMobileOpen && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-[var(--layout-z-overlay)] bg-slate-900/60 backdrop-blur-sm lg:hidden"
           onClick={() => setIsMobileOpen(false)}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={sidebarClasses}>
+      {/* ============ SIDEBAR ============ */}
+      <aside
+        className={cn(
+          // Desktop: part of flex flow (relative), pushes main content
+          // Mobile: fixed overlay drawer
+          isDesktop ? "relative" : "fixed",
+          "left-0 top-[var(--layout-header-height)] z-[var(--layout-z-sidebar)]",
+          "bg-white border-r border-slate-200",
+          "h-[calc(100vh-var(--layout-header-height))]",
+          "flex flex-col shadow-sm",
+          // Width
+          `w-[${sidebarWidth}]`,
+          "transition-all duration-300 ease-in-out",
+          // Mobile only: full viewport height, hidden by default
+          !isDesktop ? "h-screen top-0" : "",
+          !isDesktop && !isMobileOpen ? "-translate-x-full" : "",
+          !isDesktop && isMobileOpen ? "translate-x-0" : ""
+        )}
+      >
         <div className="flex h-full flex-col">
-          {/* Brand */}
-          <div className="flex items-center gap-2 px-4 py-5 border-b border-slate-100">
-            <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
-              <span className="text-white font-bold text-xs">C</span>
+          {/* Brand + Toggle */}
+          <div className="flex items-center justify-between gap-2 px-4 py-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg flex-shrink-0">
+                <span className="text-white font-bold text-xs">C</span>
+              </div>
+              {!isCollapsed && (
+                <span className="font-bold text-lg tracking-tight text-blue-600 truncate">
+                  CirebonLapor
+                </span>
+              )}
             </div>
-            {!isCollapsed && (
-              <span className="font-bold text-xl tracking-tight text-blue-600">
-                CirebonLapor
-              </span>
+
+            {/* Desktop collapse toggle (chevron) */}
+            {isDesktop && (
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
+                aria-label={isCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="w-4 h-4" />
+                ) : (
+                  <ChevronLeft className="w-4 h-4" />
+                )}
+              </button>
             )}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="ml-auto p-1.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors lg:hidden"
-              aria-label="Toggle sidebar"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+
+            {/* Mobile hamburger toggle */}
+            {!isDesktop && (
+              <button
+                onClick={() => setIsMobileOpen(true)}
+                className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
+                aria-label="Buka navigasi"
+              >
+                <span className="w-4 h-4">☰</span>
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
@@ -185,13 +245,14 @@ export default function Sidebar() {
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
-                  <Icon className={cn("w-5 h-5 shrink-0", active && "text-blue-600")} />
-                  {isCollapsed ? (
-                    <span className="absolute left-16 bg-white px-2 py-1.5 rounded shadow-sm border border-slate-200 text-xs font-medium whitespace-nowrap z-10">
+                  <div className="flex items-center justify-center w-8 shrink-0">
+                    <Icon className={cn("w-5 h-5", active && "text-blue-600")} />
+                  </div>
+                  {!isCollapsed && item.label}
+                  {isCollapsed && (
+                    <span className="absolute left-[64px] top-1/2 -translate-y-1/2 bg-white px-2 py-1.5 rounded shadow-sm border border-slate-200 text-xs font-medium whitespace-nowrap z-[var(--layout-z-tooltip)] opacity-0 group-hover:opacity-100 transition-opacity">
                       {item.label}
                     </span>
-                  ) : (
-                    item.label
                   )}
                 </Link>
               );
@@ -216,22 +277,26 @@ export default function Sidebar() {
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
-                  <Icon className={cn("w-5 h-5 shrink-0", active && "text-blue-600")} />
-                  {item.label}
+                  <div className="flex items-center justify-center w-8 shrink-0">
+                    <Icon className={cn("w-5 h-5", active && "text-blue-600")} />
+                  </div>
+                  {!isCollapsed && item.label}
                 </Link>
               );
             })}
           </nav>
 
           {/* Footer: Role badge + Logout */}
-          <div className="px-3 py-4 border-t border-slate-100">
+          <div className="px-3 py-4 border-t border-slate-100 bg-slate-50">
             {role && session?.user && (
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-slate-500" />
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                  </div>
                 </div>
                 {!isCollapsed && (
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-slate-900 truncate">
                       {session.user.name || "Pengguna"}
                     </p>
@@ -247,41 +312,17 @@ export default function Sidebar() {
               onClick={handleLogout}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
             >
-              <LogOut className="w-4 h-4" />
-              {isCollapsed ? (
-                <span className="absolute left-16 bg-white px-2 py-1.5 rounded shadow-sm border border-slate-200 text-xs font-medium whitespace-nowrap z-10 text-red-600">
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!isCollapsed && "Keluar"}
+              {isCollapsed && (
+                <span className="absolute left-[64px] top-1/2 -translate-y-1/2 bg-white px-2 py-1.5 rounded shadow-sm border border-slate-200 text-xs font-medium whitespace-nowrap z-[var(--layout-z-tooltip)] text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                   Keluar
                 </span>
-              ) : (
-                "Keluar"
               )}
             </button>
           </div>
         </div>
       </aside>
-
-      {/* Mobile hamburger toggle */}
-      {!isDesktop && !isMobileOpen && (
-        <button
-          className="fixed left-4 top-4 z-50 lg:hidden bg-white px-3 py-2 rounded-lg shadow-md border border-slate-200"
-          onClick={() => setIsMobileOpen(true)}
-          aria-label="Buka menu navigasi"
-        >
-          <svg
-            className="w-5 h-5 text-slate-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16m-7 6h7"
-            />
-          </svg>
-        </button>
-      )}
     </>
   );
 }

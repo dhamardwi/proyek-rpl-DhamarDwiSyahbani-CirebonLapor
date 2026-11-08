@@ -71,6 +71,24 @@
   /* Transition */
   --transition-all: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: all 0.15s ease;
+
+  /* ================= Layout Dimensions ================= */
+  --layout-header-height: 4rem;           /* 64px */
+  --layout-header-height-mobile: 3.5rem;  /* 56px */
+  --layout-sidebar-width: 16rem;          /* 256px */
+  --layout-sidebar-collapsed-width: 4rem; /* 64px */
+  --layout-sidebar-mobile-width: 18rem;   /* 288px */
+  --layout-content-padding: 1.5rem;       /* 24px */
+  --layout-content-padding-lg: 2.5rem;    /* 40px */
+  --layout-z-header: 50;
+  --layout-z-sidebar: 40;
+  --layout-z-dropdown: 60;
+  --layout-z-overlay: 70;
+  --layout-z-tooltip: 80;
+
+  /* Layout transition */
+  --layout-transition-width: width 0.3s ease;
+  --layout-transition-transform: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (prefers-color-scheme: dark) {
