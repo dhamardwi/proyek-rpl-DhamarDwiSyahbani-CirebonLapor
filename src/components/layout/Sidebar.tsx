@@ -88,7 +88,7 @@ const USER_NAV_ITEMS: NavItem[] = [
     href: "/settings/telegram",
     label: "Pengaturan Telegram",
     icon: Settings,
-    roles: ["ADMIN", "PETUGAS", "MASYARAKAT"],
+    roles: ["MASYARAKAT"],
   },
   {
     href: "/dashboard/profile",

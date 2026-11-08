@@ -91,13 +91,15 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
               <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
             ) : session ? (
               <>
-                <Link
-                  href="/settings/telegram"
-                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Pengaturan Telegram"
-                >
-                  <Settings className="w-5 h-5" />
-                </Link>
+                {role === "MASYARAKAT" && (
+                  <Link
+                    href="/settings/telegram"
+                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="Pengaturan Telegram"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </Link>
+                )}
                 <NotificationDropdown />
                 <div className="relative group">
                   <button
