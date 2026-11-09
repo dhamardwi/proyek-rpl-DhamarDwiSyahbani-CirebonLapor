@@ -124,12 +124,13 @@ export async function PATCH(
     });
 
     // Notifikasi (di luar transaksi agar kegagalan notif tidak rollback status)
+    // Gunakan data laporan yang sudah diupdate agar status baru sudah tercermin.
     await notifyTaskStatusChanged({
       report: {
-        id: report.id,
-        userId: report.userId,
-        title: report.title,
-        address: report.address,
+        id: updated.id,
+        userId: updated.userId,
+        title: updated.title,
+        address: updated.address,
       },
       newStatus,
       note,

@@ -117,17 +117,18 @@ export async function PATCH(
     });
 
     // Kirim notifikasi setelah transaksi sukses (fail-open).
-    // Penerima dan isi pesan ditentukan oleh report-notification-service.
+    // Gunakan data laporan yang sudah diupdate (bukan data sebelum transaksi)
+    // agar status dan petugas yang tercantum dalam notifikasi akurat.
     if (updated) {
       await notifyAdminReportAction({
         action,
         report: {
-          id: report.id,
-          userId: report.userId,
-          title: report.title,
-          address: report.address,
-          status: report.status,
-          assignedTo: report.assignedTo,
+          id: updated.id,
+          userId: updated.userId,
+          title: updated.title,
+          address: updated.address,
+          status: updated.status,
+          assignedTo: updated.assignedTo,
         },
         note,
         assigneeId,

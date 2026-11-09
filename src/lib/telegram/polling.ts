@@ -1,6 +1,7 @@
 import { sendTelegramMessage } from "./bot-service";
 import { buildReply, type TelegramIncomingMessage } from "./commands";
 import { getTelegramConfig } from "./config";
+import { processTelegramOutbox } from "./outbox";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
 const LONG_POLL_TIMEOUT_SECONDS = 25;
@@ -101,6 +102,9 @@ async function processUpdates(
   }
 }
 
+let lastOutboxProcess = 0;
+const OUTBOX_PROCESS_INTERVAL_MS = 30_000;
+
 async function loop(token: string): Promise<void> {
   const state = runtime();
 
@@ -129,6 +133,21 @@ async function loop(token: string): Promise<void> {
 
         await processUpdates(token, response.result);
         continue;
+      }
+
+      // Proses antrean outbox Telegram secara berkala saat idle,
+      // sehingga notifikasi terkirim meskipun `after()` tidak terpicu.
+      const now = Date.now();
+      if (now - lastOutboxProcess >= OUTBOX_PROCESS_INTERVAL_MS) {
+        lastOutboxProcess = now;
+        try {
+          await processTelegramOutbox({ max: 25 });
+        } catch (error) {
+          console.warn(
+            "[TELEGRAM_POLLING] Gagal memproses outbox:",
+            error instanceof Error ? error.message : "unknown"
+          );
+        }
       }
 
       await delay(IDLE_DELAY_MS);
