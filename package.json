@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "cmd /c \"set NODE_OPTIONS=--dns-result-order=ipv6first --no-network-family-autoselection && next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

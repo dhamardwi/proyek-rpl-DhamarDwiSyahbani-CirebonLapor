@@ -13,6 +13,7 @@ import {
   isLocalhostUrl,
   normalizeAppUrl,
 } from "../src/lib/telegram/config";
+import { fetchTelegram } from "../src/lib/telegram/transport";
 
 interface TelegramApiResult<T> {
   ok?: boolean;
@@ -47,16 +48,12 @@ async function callApi<T>(
   token: string,
   method: string
 ): Promise<TelegramApiResult<T>> {
-  const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
-  });
-
-  try {
-    return (await response.json()) as TelegramApiResult<T>;
-  } catch {
-    return { ok: false, description: `HTTP ${response.status}` };
-  }
+  const result = await fetchTelegram<T>(token, method, undefined, 20_000);
+  return {
+    ok: result.ok,
+    result: result.result,
+    description: result.ok ? undefined : result.description,
+  };
 }
 
 async function main() {

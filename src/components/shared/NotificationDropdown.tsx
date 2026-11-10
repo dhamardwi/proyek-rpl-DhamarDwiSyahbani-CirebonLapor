@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Clock, X } from "lucide-react";
+import { Bell, Check, Clock } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface Notification {
@@ -26,31 +25,66 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     if (!session?.user) return;
+
     let cancelled = false;
-    async function load() {
+    let activeController: AbortController | undefined;
+
+    async function load(retries = 0) {
+      // Cancel any in-flight request before starting a new one.
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+
       try {
-        const res = await fetch("/api/notifications");
+        const res = await fetch("/api/notifications", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+
         const json = await res.json();
+        if (controller.signal.aborted) return;
+
         if (!cancelled && json.success) {
           setNotifications(json.data);
           setUnreadCount(json.unreadCount);
+        } else if (!cancelled) {
+          throw new Error(json.message || "Gagal memuat notifikasi");
         }
       } catch (error) {
-        console.error("Gagal memuat notifikasi", error);
+        if (controller.signal.aborted) return;
+        if (cancelled) return;
+
+        // Pertahankan data terakhir yang berhasil dimuat (stale data)
+        // dan coba lagi dengan exponential backoff (maksimum 3 kali percobaan).
+        if (retries < 3) {
+          const backoffMs = Math.min(1000 * 2 ** retries, 10000);
+          setTimeout(() => load(retries + 1), backoffMs);
+        }
+
+        console.error(
+          "Gagal memuat notifikasi:",
+          error instanceof Error ? error.message : "unknown_error"
+        );
       }
     }
+
     load();
     // Polling setiap 30 detik
-    const interval = setInterval(load, 30000);
+    const interval = setInterval(() => load(), 30000);
     return () => {
       cancelled = true;
+      activeController?.abort();
       clearInterval(interval);
     };
   }, [session]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -65,10 +99,15 @@ export default function NotificationDropdown() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationId: id }),
       });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Error marking as read", error);
+      console.error(
+        "Error marking as read:",
+        error instanceof Error ? error.message : "unknown_error"
+      );
     }
   };
 
@@ -79,10 +118,13 @@ export default function NotificationDropdown() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAll: true }),
       });
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error("Error marking all as read", error);
+      console.error(
+        "Error marking all as read:",
+        error instanceof Error ? error.message : "unknown_error"
+      );
     }
   };
 
@@ -131,16 +173,16 @@ export default function NotificationDropdown() {
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {notifications.map((notif) => (
-                      <div 
+                      <div
                         key={notif.id}
-                        className={`p-4 transition-colors ${notif.isRead ? 'bg-white hover:bg-slate-50' : 'bg-blue-50/50 hover:bg-blue-50'}`}
+                        className={`p-4 transition-colors ${notif.isRead ? "bg-white hover:bg-slate-50" : "bg-blue-50/50 hover:bg-blue-50"}`}
                       >
                         <div className="flex gap-3">
                           <div className="shrink-0 mt-1">
-                            <div className={`w-2 h-2 rounded-full ${notif.isRead ? 'bg-slate-300' : 'bg-blue-500'}`} />
+                            <div className={`w-2 h-2 rounded-full ${notif.isRead ? "bg-slate-300" : "bg-blue-500"}`} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className={`text-sm font-semibold mb-1 ${notif.isRead ? 'text-slate-700' : 'text-slate-900'}`}>
+                            <h4 className={`text-sm font-semibold mb-1 ${notif.isRead ? "text-slate-700" : "text-slate-900"}`}>
                               {notif.title}
                             </h4>
                             <p className="text-sm text-slate-600 mb-2 leading-relaxed">
@@ -149,9 +191,12 @@ export default function NotificationDropdown() {
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-xs text-slate-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {new Date(notif.createdAt).toLocaleDateString("id-ID", { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(notif.createdAt).toLocaleDateString("id-ID", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
                               </span>
-                              
+
                               <div className="flex gap-2">
                                 {!notif.isRead && (
                                   <button
@@ -165,7 +210,7 @@ export default function NotificationDropdown() {
                                   </button>
                                 )}
                                 {notif.link && (
-                                  <Link 
+                                  <Link
                                     href={notif.link}
                                     onClick={() => markAsRead(notif.id)}
                                     className="text-xs text-slate-700 font-medium hover:underline flex items-center"
@@ -183,7 +228,9 @@ export default function NotificationDropdown() {
                 )}
               </div>
               <div className="p-3 text-center border-t border-slate-100 bg-slate-50">
-                <p className="text-xs text-slate-400">Menampilkan hingga 20 notifikasi terbaru</p>
+                <p className="text-xs text-slate-400">
+                  Menampilkan hingga 20 notifikasi terbaru
+                </p>
               </div>
             </CardContent>
           </Card>
