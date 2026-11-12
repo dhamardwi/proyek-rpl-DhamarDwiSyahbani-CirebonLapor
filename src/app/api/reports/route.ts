@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import { CreateReportSchema } from "@/lib/validations/report";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { getAIService, decideAutoModeration, type AutoDecision } from "@/lib/ai-service";
-import { notifyReportCreated } from "@/lib/report-notification-service";
+import { getAIService } from "@/lib/ai-service";
+import { computeImageHash } from "@/lib/duplicate/image-hash";
+import { processReportAfterSubmission } from "@/lib/report-ai-pipeline";
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,6 +73,9 @@ export async function POST(req: NextRequest) {
     const filePath = path.join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
+    // Hash perseptual untuk deteksi gambar duplikat (gagal = null, tidak fatal).
+    const imageHash = await computeImageHash(buffer);
+
     const relativeImageUrl = `/uploads/reports/${fileName}`;
 
     // Database Transaction to save Report, ReportImage, and ReportStatusHistory
@@ -95,7 +99,8 @@ export async function POST(req: NextRequest) {
         data: {
           reportId: newReport.id,
           imagePath: relativeImageUrl,
-          imageType: "KERUSAKAN"
+          imageType: "KERUSAKAN",
+          imageHash,
         }
       });
 
@@ -113,125 +118,43 @@ export async function POST(req: NextRequest) {
     });
 
     // ====================================================================
-    // AI OTOMATIS (non-blocking: jika gagal, laporan tetap tersimpan
-    // dan menunggu verifikasi manual admin)
-    // - confidence tinggi → AI verifikasi otomatis (DITERIMA)
-    // - confidence rendah → AI tolak otomatis (DITOLAK)
-    // - di antaranya → MENUNGGU_VERIFIKASI untuk admin manual
+    // PROSES AI & DUPLIKAT (non-blocking)
+    // Dijadwalkan lewat `after()` agar masyarakat tidak menunggu Gemini.
+    // Kegagalan AI tidak pernah menggagalkan pengiriman laporan.
     // ====================================================================
-    let aiResult = null;
-    let autoDecision: AutoDecision = "MANUAL_REVIEW";
-    let autoReason = "";
     const aiService = getAIService();
+    const aiQueued = await aiService.isAvailable();
 
-    if (aiService.isAvailable()) {
-      try {
-        await db.report.update({
-          where: { id: report.id },
-          data: { status: "DIPROSES_AI" },
-        });
-        await db.reportStatusHistory.create({
-          data: {
-            reportId: report.id,
-            status: "DIPROSES_AI",
-            note: "Laporan sedang dianalisis otomatis oleh AI",
-            updatedById: session.user.id,
-          },
-        });
-
-        console.log("[AI] Memulai analisis gambar untuk laporan:", report.id);
-        aiResult = await aiService.analyzeImage(relativeImageUrl);
-
-        if (aiResult) {
-          const moderation = decideAutoModeration(aiResult);
-          autoDecision = moderation.decision;
-          autoReason = moderation.reason;
-
-          const finalStatus =
-            autoDecision === "AUTO_ACCEPTED"
-              ? "DITERIMA"
-              : autoDecision === "AUTO_REJECTED"
-                ? "DITOLAK"
-                : "MENUNGGU_VERIFIKASI";
-
-          await db.report.update({
-            where: { id: report.id },
-            data: {
-              aiAnalysis: JSON.stringify({ ...aiResult, autoDecision, autoReason }),
-              damageType: aiResult.damage_type,
-              damageLevel: aiResult.damage_level,
-              priority: aiResult.priority,
-              status: finalStatus,
-            },
-          });
-
-          const historyNote =
-            autoDecision === "AUTO_ACCEPTED"
-              ? `Diverifikasi otomatis oleh AI. ${autoReason} Admin dapat meninjau/override manual.`
-              : autoDecision === "AUTO_REJECTED"
-                ? `Ditolak otomatis oleh AI. ${autoReason} Admin dapat meninjau/override manual.`
-                : `Analisis AI selesai (${Math.round(aiResult.confidence * 100)}%). ${autoReason}`;
-
-          await db.reportStatusHistory.create({
-            data: {
-              reportId: report.id,
-              status: finalStatus,
-              note: historyNote,
-              updatedById: session.user.id,
-            },
-          });
-
-          console.log("[AI] Keputusan otomatis untuk laporan:", report.id, autoDecision);
-        } else {
-          console.warn("[AI] Analisis mengembalikan null untuk laporan:", report.id);
-          await db.report.update({
-            where: { id: report.id },
-            data: { status: "MENUNGGU_VERIFIKASI" },
-          });
-        }
-      } catch (aiError) {
-        // AI gagal — kembalikan ke antrean manual agar tidak macet di DIPROSES_AI
-        console.error("[AI] Error saat menganalisis, laporan tetap tersimpan:", aiError);
-        await db.report.update({
-          where: { id: report.id },
-          data: { status: "MENUNGGU_VERIFIKASI" },
-        }).catch(() => {});
-      }
-    } else {
-      console.log("[AI] AI Service tidak tersedia (API key belum diset). Laporan tersimpan tanpa analisis AI.");
-    }
-
-    // ====================================================================
-    // NOTIFIKASI (fail-open: kegagalan notif tidak menggagalkan laporan)
-    // 1. Masyarakat pelapor → "laporan sudah dibuat" (+ hasil AI bila ada)
-    // 2. Semua admin aktif → "laporan masuk dari masyarakat"
-    // 3. Semua petugas aktif → bila laporan terverifikasi (manual/AI)
-    // ====================================================================
-    await notifyReportCreated({
-      report: {
-        id: report.id,
-        title: report.title,
-        createdAt: report.createdAt,
-      },
-      reporterId: session.user.id,
-      reporterName: session.user.name ?? "Masyarakat",
-      autoDecision,
+    after(async () => {
+      await processReportAfterSubmission({
+        reportId: report.id,
+        userId: session.user.id,
+        reporterName: session.user.name ?? "Masyarakat",
+        reportCreatedAt: report.createdAt,
+        imageUrl: relativeImageUrl,
+        imageHash,
+        title: parsed.data.title,
+        description: parsed.data.description ?? null,
+        facilityTypeId: parsed.data.facilityTypeId,
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
+      });
     });
 
-    const responseMessage =
-      autoDecision === "AUTO_ACCEPTED"
-        ? "Laporan berhasil dikirim dan terverifikasi otomatis oleh AI!"
-        : autoDecision === "AUTO_REJECTED"
-          ? "Laporan diterima tetapi ditolak otomatis oleh AI (foto tidak jelas). Admin dapat meninjau ulang."
-          : "Laporan berhasil dikirim!";
+    if (!aiQueued) {
+      console.log(
+        "[AI] Gemini belum dikonfigurasi. Pemeriksaan duplikat lokal tetap dijalankan."
+      );
+    }
 
+    // Notifikasi & analisis AI dijalankan setelah response (lihat pipeline),
+    // sehingga pengiriman laporan tidak pernah tertahan oleh provider AI.
     return NextResponse.json(
       {
         success: true,
-        message: responseMessage,
+        message: "Laporan berhasil dikirim!",
         data: report,
-        aiAnalyzed: aiResult !== null,
-        autoDecision,
+        aiQueued,
       },
       { status: 201 }
     );

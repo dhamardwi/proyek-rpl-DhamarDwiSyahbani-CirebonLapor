@@ -24,6 +24,7 @@ import {
 } from "@/lib/constants";
 import AdminReportActionForm from "@/components/admin/AdminReportActionForm";
 import AIAnalysisCard from "@/components/admin/AIAnalysisCard";
+import DuplicateReportCard from "@/components/admin/DuplicateReportCard";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -71,6 +72,13 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
           orderBy: { createdAt: "desc" },
           include: {
             updatedBy: { select: { name: true, role: true } },
+          },
+        },
+        duplicateAnalyses: {
+          orderBy: { similarityScore: "desc" },
+          take: 5,
+          include: {
+            candidate: { select: { id: true, title: true, status: true } },
           },
         },
       },
@@ -194,6 +202,20 @@ export default async function AdminReportDetailPage({ params }: { params: Promis
 
           {/* ====== AI ANALYSIS CARD ====== */}
           <AIAnalysisCard aiAnalysis={report.aiAnalysis} showForRole="ADMIN" />
+
+          {/* ====== DUPLICATE REPORT CARD ====== */}
+          <DuplicateReportCard
+            analyses={report.duplicateAnalyses.map((analysis) => ({
+              id: analysis.id,
+              candidateReportId: analysis.candidateReportId,
+              candidateTitle: analysis.candidate.title,
+              similarityScore: analysis.similarityScore,
+              distanceMeters: analysis.distanceMeters,
+              isPotential: analysis.isPotential,
+              adminStatus: analysis.adminStatus,
+              aiAnalysis: analysis.aiAnalysis,
+            }))}
+          />
 
           {/* Foto Bukti Perbaikan */}
           {perbaikanImages.length > 0 && (

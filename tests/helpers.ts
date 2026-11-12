@@ -6,6 +6,7 @@ export async function resetDatabase() {
   await db.notification.deleteMany();
   await db.telegramLink.deleteMany();
   await db.telegramLinkToken.deleteMany();
+  await db.reportDuplicateAnalysis.deleteMany();
   await db.reportStatusHistory.deleteMany();
   await db.reportImage.deleteMany();
   await db.report.deleteMany();

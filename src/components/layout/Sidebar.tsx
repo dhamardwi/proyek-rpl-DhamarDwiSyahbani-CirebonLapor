@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Wrench,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -61,6 +62,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin/users",
     label: "Manajemen Pengguna",
     icon: Users,
+    roles: ["ADMIN"],
+  },
+  {
+    href: "/admin/settings/ai",
+    label: "Konfigurasi AI",
+    icon: Bot,
     roles: ["ADMIN"],
   },
   {

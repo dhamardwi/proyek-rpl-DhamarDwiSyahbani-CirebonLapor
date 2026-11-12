@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Jika API key belum diset, pakai jawaban lokal agar chatbot tetap berguna
-    if (!isChatbotAvailable()) {
+    if (!(await isChatbotAvailable())) {
       return NextResponse.json({
         success: true,
         reply: localFallback(lastUserMessage),

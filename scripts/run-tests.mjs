@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const testFiles = [
+  "tests/ai-config.test.ts",
   "tests/chatbot-context.test.ts",
   "tests/telegram-format.test.ts",
   "tests/telegram-linking.test.ts",

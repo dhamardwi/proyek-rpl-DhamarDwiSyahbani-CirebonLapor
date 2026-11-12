@@ -50,6 +50,7 @@ model User {
   notifications      Notification[]
   telegramLink       TelegramLink?
   telegramLinkTokens TelegramLinkToken[]
+  duplicateReviews   ReportDuplicateAnalysis[] @relation("DuplicateReviewer")
 
   @@map("users")
 }
@@ -101,6 +102,8 @@ model Report {
   facilityType  FacilityType          @relation(fields: [facilityTypeId], references: [id])
   images        ReportImage[]
   statusHistory ReportStatusHistory[]
+  duplicateAnalyses  ReportDuplicateAnalysis[] @relation("DuplicateReport")
+  duplicateCandidates ReportDuplicateAnalysis[] @relation("DuplicateCandidate")
 
   @@index([status])
   @@index([priority])
@@ -118,6 +121,8 @@ model ReportImage {
   id        String   @id @default(cuid())
   imagePath String   @map("image_path")
   imageType String   @default("KERUSAKAN") @map("image_type") // KERUSAKAN | BUKTI_PERBAIKAN
+  // Perceptual hash (dHash) untuk deteksi gambar duplikat.
+  imageHash String?  @map("image_hash")
   createdAt DateTime @default(now()) @map("created_at")
 
   // Foreign keys
@@ -126,6 +131,7 @@ model ReportImage {
   // Relations
   report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  @@index([imageHash])
   @@map("report_images")
 }
 
@@ -230,4 +236,57 @@ model TelegramOutbox {
   @@index([status, nextAttemptAt])
   @@index([userId])
   @@map("telegram_outbox")
+}
+
+// ===========================================================
+// APP SETTINGS (key-value)
+// Menyimpan konfigurasi aplikasi yang diatur Admin, termasuk AI.
+// API key AI disimpan TERENKRIPSI dengan prefix "enc:v1:".
+// Diakses lewat SQL parameterized (bukan Prisma model) agar format
+// `updated_at` epoch-ms yang sudah ada tetap kompatibel.
+// ===========================================================
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @map("updated_at")
+
+  @@map("app_settings")
+}
+
+// ===========================================================
+// REPORT DUPLICATE ANALYSIS
+// Hasil pemeriksaan duplikat antara laporan baru dan kandidat.
+// ===========================================================
+
+model ReportDuplicateAnalysis {
+  id                String   @id @default(cuid())
+  reportId          String   @map("report_id")
+  candidateReportId String   @map("candidate_report_id")
+  similarityScore   Float    @default(0) @map("similarity_score")
+  descriptionScore  Float    @default(0) @map("description_score")
+  titleScore        Float    @default(0) @map("title_score")
+  categoryScore     Float    @default(0) @map("category_score")
+  locationScore     Float    @default(0) @map("location_score")
+  photoScore        Float?   @map("photo_score")
+  distanceMeters    Float?   @map("distance_meters")
+  isPotential       Boolean  @default(false) @map("is_potential")
+  aiStatus          String   @default("PENDING") @map("ai_status") // PENDING | DONE | FAILED
+  adminStatus       String   @default("PENDING") @map("admin_status") // PENDING | CONFIRMED | REJECTED
+  aiAnalysis        String?  @map("ai_analysis")
+  adminNote         String?  @map("admin_note")
+  reviewedBy        String?  @map("reviewed_by")
+  reviewedAt        DateTime? @map("reviewed_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  report    Report @relation("DuplicateReport", fields: [reportId], references: [id], onDelete: Cascade)
+  candidate Report @relation("DuplicateCandidate", fields: [candidateReportId], references: [id], onDelete: Cascade)
+  reviewer  User?  @relation("DuplicateReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@unique([reportId, candidateReportId])
+  @@index([reportId, isPotential])
+  @@index([candidateReportId])
+  @@index([adminStatus])
+  @@map("report_duplicate_analyses")
 }

@@ -1,34 +1,30 @@
 /**
  * Chatbot Service — NVIDIA NIM (OpenAI-compatible).
  *
- * Endpoint: https://integrate.api.nvidia.com/v1/chat/completions
- * Auth: Authorization: Bearer <NVIDIA_API_KEY> (nvapi-...)
- * Model default: openai/gpt-oss-20b (terverifikasi bisa diakses key ini).
- * Bisa diganti lewat env NVIDIA_MODEL.
+ * Endpoint default: https://integrate.api.nvidia.com/v1/chat/completions
+ * Auth: Authorization: Bearer <API key>
+ * Model default: openai/gpt-oss-20b.
  *
- * API key TIDAK PERNAH dikirim ke client — hanya dipakai di server
- * (API route /api/chatbot).
+ * Konfigurasi (API key, base URL, model) dibaca dari pengaturan Admin di
+ * database, dengan fallback ke environment variable. API key TIDAK PERNAH
+ * dikirim ke client — hanya dipakai di server (API route /api/chatbot).
  */
+
+import { getAiConfig } from "@/lib/ai/config";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-function getNvidiaEndpoint(): string {
-  return (
-    process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1"
-  ).replace(/\/$/, "");
+export async function getChatbotModel(): Promise<string> {
+  const config = await getAiConfig("NVIDIA");
+  return config.model;
 }
 
-export function getChatbotModel(): string {
-  // Default: model yang terverifikasi dapat diakses API key ini.
-  // Ganti lewat env NVIDIA_MODEL jika key Anda memiliki akses ke model lain.
-  return process.env.NVIDIA_MODEL || "openai/gpt-oss-20b";
-}
-
-export function isChatbotAvailable(): boolean {
-  return Boolean(process.env.NVIDIA_API_KEY);
+export async function isChatbotAvailable(): Promise<boolean> {
+  const config = await getAiConfig("NVIDIA");
+  return config.isActive && Boolean(config.apiKey);
 }
 
 export const CHATBOT_SYSTEM_PROMPT = `Anda adalah Chatbot Asisten Cerdas untuk aplikasi pengaduan fasilitas umum "CirebonLapor". Tugas Anda adalah membantu pengguna berdasarkan ROLE aktif mereka saat ini: {USER_ROLE} (Role yang tersedia: MASYARAKAT, ADMIN, atau PETUGAS).
@@ -89,14 +85,14 @@ export async function sendChatToNvidia(
   dbContext?: string,
   role?: string
 ): Promise<string> {
-  const apiKey = process.env.NVIDIA_API_KEY;
-  if (!apiKey) {
+  const config = await getAiConfig("NVIDIA");
+  if (!config.isActive || !config.apiKey) {
     throw new Error(
-      "NVIDIA_API_KEY belum diset di environment variables."
+      "Konfigurasi NVIDIA NIM belum aktif. Atur API key dan model di halaman Admin."
     );
   }
 
-  const model = getChatbotModel();
+  const model = config.model;
   const payload: Record<string, unknown> = {
     model,
     messages: [{ role: "system", content: buildSystemPrompt(dbContext, role) }, ...messages],
@@ -109,19 +105,21 @@ export async function sendChatToNvidia(
     payload.reasoning_effort = "low";
   }
 
-  const res = await fetch(`${getNvidiaEndpoint()}/chat/completions`, {
+  const res = await fetch(`${config.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify(payload),
+    cache: "no-store",
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    const safeText = text.split(config.apiKey).join("***");
     throw new Error(
-      `NVIDIA API error (${res.status}): ${text.slice(0, 500)}`
+      `NVIDIA API error (${res.status}): ${safeText.slice(0, 500)}`
     );
   }
 

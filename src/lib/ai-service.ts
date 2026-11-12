@@ -2,14 +2,20 @@
  * AI Analysis Service
  *
  * Menggunakan Google Gemini Vision API untuk menganalisis foto kerusakan fasilitas umum.
- * Service ini bertindak sebagai Decision Support — bukan pengambil keputusan final.
+ * Konfigurasi (API key, base URL, model) dibaca dari pengaturan Admin di database,
+ * dengan fallback ke environment variable.
  *
+ * Service ini bertindak sebagai Decision Support — bukan pengambil keputusan final.
  * Jika AI gagal, laporan tetap tersimpan dan Admin tetap bisa menilai secara manual.
  */
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { readFile } from "fs/promises";
 import path from "path";
+import { getAiConfig } from "@/lib/ai/config";
+import {
+  generateGeminiContent,
+  summarizeGeminiError,
+} from "@/lib/ai/gemini";
 
 export interface AIAnalysisResult {
   facility_type: string;
@@ -98,23 +104,16 @@ Format respons JSON:
   "confidence": 0.0-1.0
 }`;
 
+const GEMINI_TIMEOUT_MS = 45_000;
+
 export class AIAnalysisService {
-  private genAI: GoogleGenerativeAI | null = null;
-
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
-    } else {
-      console.warn("[AIAnalysisService] GEMINI_API_KEY tidak ditemukan di environment variables. AI Analysis dinonaktifkan.");
-    }
-  }
-
   /**
-   * Cek apakah service siap digunakan (API key tersedia).
+   * Cek apakah service siap digunakan. Konfigurasi dibaca ulang setiap kali
+   * dipanggil agar perubahan dari halaman Admin langsung berlaku.
    */
-  isAvailable(): boolean {
-    return this.genAI !== null;
+  async isAvailable(): Promise<boolean> {
+    const config = await getAiConfig("GEMINI");
+    return config.isActive && Boolean(config.apiKey);
   }
 
   /**
@@ -124,8 +123,11 @@ export class AIAnalysisService {
    * @returns Hasil analisis AI atau null jika gagal
    */
   async analyzeImage(imagePath: string): Promise<AIAnalysisResult | null> {
-    if (!this.genAI) {
-      console.warn("[AIAnalysisService] Service tidak tersedia — GEMINI_API_KEY tidak diset.");
+    const config = await getAiConfig("GEMINI");
+    if (!config.isActive || !config.apiKey) {
+      console.warn(
+        "[AIAnalysisService] Service tidak tersedia — konfigurasi Gemini belum diisi di halaman Admin."
+      );
       return null;
     }
 
@@ -146,35 +148,64 @@ export class AIAnalysisService {
       if (ext === ".png") mimeType = "image/png";
       if (ext === ".webp") mimeType = "image/webp";
 
-      // Panggil Gemini Vision (dengan timeout agar request tidak menggantung)
-      const model = this.genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      // Panggil Gemini REST API langsung agar Base URL & model dari Admin
+      // benar-benar dipakai. Helper menangani thinkingConfig, fallback model
+      // yang sudah tidak tersedia, dan ekstraksi teks tanpa part "thought".
+      const result = await generateGeminiContent({
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        model: config.model,
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: SYSTEM_PROMPT },
+              {
+                inlineData: {
+                  mimeType,
+                  data: base64Image,
+                },
+              },
+              {
+                text: "Analisis foto kerusakan fasilitas umum ini dan berikan penilaian dalam format JSON.",
+              },
+            ],
+          },
         ],
+        maxOutputTokens: 2048,
+        json: true,
+        timeoutMs: GEMINI_TIMEOUT_MS,
       });
 
-      const result = await Promise.race([
-        model.generateContent([
-          { text: SYSTEM_PROMPT },
-          {
-            inlineData: {
-              mimeType,
-              data: base64Image,
-            },
-          },
-          { text: "Analisis foto kerusakan fasilitas umum ini dan berikan penilaian dalam format JSON." },
-        ]),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Gemini request timeout (60s)")), 60_000)
-        ),
-      ]);
+      if (result.status === 0) {
+        console.error("[AIAnalysisService] Gemini timeout/tidak terhubung:", result.raw);
+        return null;
+      }
 
-      const response = result.response;
-      const text = response.text();
+      if (!result.ok) {
+        console.error(
+          `[AIAnalysisService] Gemini error (${result.status}):`,
+          summarizeGeminiError(result.raw, config.apiKey, result.status)
+        );
+        return null;
+      }
+
+      if (result.fallbackFrom) {
+        console.warn(
+          `[AIAnalysisService] Model "${result.fallbackFrom}" tidak tersedia/sibuk; ` +
+            `memakai fallback "${result.usedModel}".`
+        );
+      }
+
+      const text = result.text;
+
+      if (!text) {
+        console.error(
+          "[AIAnalysisService] Gemini tidak mengembalikan teks" +
+            (result.finishReason ? ` (finishReason: ${result.finishReason}).` : ".")
+        );
+        return null;
+      }
 
       // Parse JSON dari respons — bersihkan jika ada markdown code block
       const cleanedText = text
