@@ -29,6 +29,12 @@ export async function GET() {
   if (!session?.user) {
     return noStore({ success: false, message: "Unauthorized" }, 401);
   }
+  if (session.user.role === "ADMIN" || session.user.role === "PETUGAS") {
+    return noStore(
+      { success: false, message: "Integrasi Telegram tidak tersedia untuk akun admin atau petugas." },
+      403
+    );
+  }
 
   try {
     const status = await getTelegramStatus(session.user.id);
@@ -61,6 +67,12 @@ export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return noStore({ success: false, message: "Unauthorized" }, 401);
+  }
+  if (session.user.role === "ADMIN" || session.user.role === "PETUGAS") {
+    return noStore(
+      { success: false, message: "Integrasi Telegram tidak tersedia untuk akun admin atau petugas." },
+      403
+    );
   }
 
   const config = getTelegramConfig();
@@ -118,6 +130,12 @@ export async function DELETE() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return noStore({ success: false, message: "Unauthorized" }, 401);
+  }
+  if (session.user.role === "ADMIN" || session.user.role === "PETUGAS") {
+    return noStore(
+      { success: false, message: "Integrasi Telegram tidak tersedia untuk akun admin atau petugas." },
+      403
+    );
   }
 
   try {

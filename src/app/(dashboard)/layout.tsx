@@ -1,145 +1,133 @@
 "use client";
 
-import { PropsWithChildren, useState, useEffect } from "react";
+import { PropsWithChildren, useEffect, useRef, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import DashboardFooter from "@/components/layout/Footer";
 import NotificationDropdown from "@/components/shared/NotificationDropdown";
-import { User, Settings, Bell, Menu, LogOut } from "lucide-react";
+import { User, Settings, Menu, LogOut, ChevronDown, MapPin } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-export default function DashboardLayout({ children }: PropsWithChildren<DashboardLayoutProps>) {
+export default function DashboardLayout({ children }: PropsWithChildren) {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(true);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const role = session?.user?.role as string | undefined;
   const isLoading = status === "loading";
 
-  const handleLogout = () => {
-    signOut();
-    setIsUserMenuOpen(false);
-    setIsSidebarOpen(false);
-  };
-
-  // Track window size for responsive behavior
   useEffect(() => {
-    const updateSize = () => {
-      setIsDesktop(typeof window !== "undefined" ? window.innerWidth >= 1024 : true);
+    const onClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  // Close mobile sidebar on route change
   useEffect(() => {
-    if (!isDesktop) {
-      setIsSidebarOpen(false);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setIsSidebarOpen(false);
+    setIsUserMenuOpen(false);
+  }, [pathname]);
+
+  const profileHref = role ? `/dashboard/${role.toLowerCase()}/profile` : "/dashboard";
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* ============ HEADER ============ */}
-      <header
-        className="sticky top-0 z-[var(--layout-z-header)] h-[var(--layout-header-height)] bg-white/80 backdrop-blur-md border-b border-slate-200"
-      >
-        <div className="flex items-center justify-between h-full w-full px-4 sm:px-6 lg:px-8">
-          {/* Left: Mobile toggle + Brand */}
+    <div className="app-bg flex min-h-screen flex-col">
+      <header className="sticky top-0 z-[var(--layout-z-header)] h-[var(--layout-header-height)] border-b border-slate-200/70 bg-white/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+        <div className="flex h-full items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            {/* Mobile hamburger toggle */}
-            {!isDesktop && (
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                aria-label="Buka navigasi"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">C</span>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+              aria-label="Buka navigasi"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-sm shadow-blue-600/20">
+                <span className="text-xs font-bold text-white">CL</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-slate-900">
-                CirebonLapor
-              </span>
+              <div className="flex flex-col leading-none">
+                <span className="text-sm font-semibold tracking-tight text-slate-900">CirebonLapor</span>
+                <span className="hidden text-[11px] text-slate-500 sm:block">Pelaporan Fasilitas Umum</span>
+              </div>
             </Link>
           </div>
 
-          {/* Center: Desktop navigation links */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/map"
-              className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-50"
+              className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 md:inline-flex"
             >
+              <MapPin className="h-4 w-4" />
               Peta Sebaran
             </Link>
-          </div>
 
-          {/* Right: User actions */}
-          <div className="flex items-center gap-3">
             {isLoading ? (
-              <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
+              <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200" />
             ) : session ? (
               <>
                 {role === "MASYARAKAT" && (
                   <Link
                     href="/settings/telegram"
-                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
                     title="Pengaturan Telegram"
                   >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="h-4.5 w-4.5" />
                   </Link>
                 )}
                 <NotificationDropdown />
-                <div className="relative group">
+                <div className="relative" ref={userMenuRef}>
                   <button
-                    onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium text-sm border border-blue-100 hover:bg-blue-100 transition-colors"
+                    onClick={() => setIsUserMenuOpen((v) => !v)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-sm transition-all",
+                      isUserMenuOpen
+                        ? "border-blue-200 bg-blue-50/70 text-blue-700"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    )}
                   >
-                    <User className="w-4 h-4" />
-                    <span className="hidden sm:block">{session.user?.name}</span>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <span className="hidden max-w-[8rem] truncate font-medium sm:block">{session.user?.name}</span>
+                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", isUserMenuOpen && "rotate-180")} />
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-[var(--layout-z-dropdown)] animate-in fade-in zoom-in-95 duration-200">
-                      <div className="p-3 border-b border-slate-100">
-                        <p className="text-sm font-medium text-slate-900">
-                          {session.user?.name}
-                        </p>
-                        <p className="text-xs text-slate-500 capitalize">
-                          {session.user?.role}
-                        </p>
+                    <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-lg shadow-slate-200/60 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-2.5">
+                        <p className="truncate text-sm font-semibold text-slate-900">{session.user?.name}</p>
+                        <p className="text-xs capitalize text-slate-500">{role?.toLowerCase()}</p>
                       </div>
+                      <div className="my-1 h-px bg-slate-100" />
                       <Link
-                        href={`/dashboard/${session.user?.role?.toLowerCase()}/profile`}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
+                        href={profileHref}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                       >
-                        <User className="w-4 h-4 text-slate-500" />
-                        Manajemen Profil
+                        <User className="h-4 w-4 text-slate-400" />
+                        Profil Saya
                       </Link>
                       <Link
                         href="/settings/telegram"
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                       >
-                        <Settings className="w-4 h-4 text-slate-500" />
-                        Pengaturan Telegram
+                        <Settings className="h-4 w-4 text-slate-400" />
+                        Pengaturan
                       </Link>
-                      <hr className="my-1 border-slate-100" />
+                      <div className="my-1 h-px bg-slate-100" />
                       <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        onClick={() => signOut()}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
                       >
-                        <LogOut className="w-4 h-4" />
+                        <LogOut className="h-4 w-4" />
                         Keluar
                       </button>
                     </div>
@@ -149,7 +137,7 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
             ) : (
               <Link
                 href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                className="inline-flex h-9 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700"
               >
                 Masuk
               </Link>
@@ -158,23 +146,20 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
         </div>
       </header>
 
-      {/* ============ BODY (Sidebar + Main Content) ============ */}
-      <div className={cn("flex-1 flex min-h-[calc(100vh-var(--layout-header-height))]")}>
-        {/* Sidebar */}
+      <div className="flex min-h-[calc(100vh-var(--layout-header-height))] flex-1">
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           setIsCollapsed={setIsSidebarCollapsed}
           isMobileOpen={isSidebarOpen}
           setIsMobileOpen={setIsSidebarOpen}
         />
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-6 sm:p-8 lg:p-10">{children}</div>
+        <main className="flex-1 overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[var(--layout-content-max)] p-4 sm:p-6 lg:p-8">
+            {children}
+          </div>
         </main>
       </div>
 
-      {/* ============ FOOTER ============ */}
       <DashboardFooter />
     </div>
   );

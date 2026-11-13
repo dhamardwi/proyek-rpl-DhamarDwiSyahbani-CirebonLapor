@@ -12,8 +12,6 @@ import { getTelegramStatus } from "@/lib/telegram/linking";
 import TelegramSettings, {
   type TelegramSettingsData,
 } from "@/components/settings/TelegramSettings";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-
 export const metadata = {
   title: "Pengaturan Telegram - CirebonLapor",
   description: "Hubungkan akun Telegram untuk menerima notifikasi laporan",
@@ -26,6 +24,9 @@ export default async function TelegramSettingsPage() {
 
   if (!session?.user) {
     redirect("/login?callbackUrl=/settings/telegram");
+  }
+  if (session.user.role === "ADMIN" || session.user.role === "PETUGAS") {
+    redirect(`/dashboard/${(session.user.role ?? "admin").toLowerCase()}`);
   }
 
   const [status, config] = await Promise.all([
@@ -46,24 +47,16 @@ export default async function TelegramSettingsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Pengaturan Telegram</h1>
-        <p className="text-sm text-slate-500 mt-1">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Pengaturan Akun</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Pengaturan Telegram</h1>
+        <p className="max-w-3xl text-sm text-slate-500 sm:text-base">
           Hubungkan akun Telegram pribadi untuk menerima notifikasi laporan sesuai peran Anda.
         </p>
       </div>
 
-      <Card>
-        <CardHeader className="pb-6">
-          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-            Integrasi Telegram
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TelegramSettings initialData={initialData} role={session.user.role ?? "MASYARAKAT"} />
-        </CardContent>
-      </Card>
+      <TelegramSettings initialData={initialData} />
     </div>
   );
 }

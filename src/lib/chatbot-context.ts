@@ -52,7 +52,8 @@ export interface ChatbotProfile {
   reportCount: number;
   taskCount: number;
   unreadNotifications: number;
-  telegramConnected: boolean;
+  /** Hanya relevan untuk MASYARAKAT; integrasi Telegram tidak tersedia untuk ADMIN/PETUGAS. */
+  telegramConnected?: boolean;
 }
 
 export interface ChatbotAdminStats {
@@ -300,7 +301,9 @@ export async function getChatbotDbData(
           role: true,
           isActive: true,
           createdAt: true,
-          telegramLink: { select: { id: true } },
+          ...(role === "MASYARAKAT"
+            ? { telegramLink: { select: { id: true } } }
+            : {}),
           _count: { select: { reports: true, assignments: true } },
         },
       }),
@@ -317,7 +320,13 @@ export async function getChatbotDbData(
           reportCount: profileRow._count.reports,
           taskCount: profileRow._count.assignments,
           unreadNotifications,
-          telegramConnected: Boolean(profileRow.telegramLink),
+          ...(role === "MASYARAKAT"
+            ? {
+                telegramConnected: Boolean(
+                  (profileRow as { telegramLink?: { id: string } | null }).telegramLink
+                ),
+              }
+            : {}),
         }
       : null;
 
@@ -402,6 +411,10 @@ export function formatDbContext(data: ChatbotDbData, role: ChatbotRole): string 
 
   if (data.profile) {
     const p = data.profile;
+    const telegramInfo =
+      p.role === "MASYARAKAT"
+        ? ` | Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}`
+        : "";
     lines.push(
       "[PROFIL PENGGUNA]",
       `Nama: ${safeText(p.name, 80)}`,
@@ -411,7 +424,8 @@ export function formatDbContext(data: ChatbotDbData, role: ChatbotRole): string 
       `Bergabung sejak: ${p.joinedAt.toLocaleDateString("id-ID")}`,
       `Jumlah laporan dibuat: ${p.reportCount} | Tugas ditugaskan: ${p.taskCount}` +
         ` | Notifikasi belum dibaca: ${p.unreadNotifications}` +
-        ` | Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}.`
+        telegramInfo +
+        "."
     );
   }
 
@@ -967,7 +981,10 @@ export function answerDataQuestion(
         q
       );
 
-    if (/(telegram|chat id).*(saya|akun|terhubung|konek)|apakah.*telegram|status telegram|hubungkan telegram/.test(q)) {
+    if (
+      p.role === "MASYARAKAT" &&
+      /(telegram|chat id).*(saya|akun|terhubung|konek)|apakah.*telegram|status telegram|hubungkan telegram/.test(q)
+    ) {
       return p.telegramConnected
         ? "Akun Telegram Anda sudah terhubung."
         : "Akun Telegram Anda belum terhubung.";
@@ -982,6 +999,10 @@ export function answerDataQuestion(
     }
 
     if (/profil|akun saya|data saya|identitas saya|status akun/.test(q)) {
+      const telegramLine =
+        p.role === "MASYARAKAT"
+          ? `\n- Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}`
+          : "";
       return (
         `Profil akun Anda:\n` +
         `- Nama: ${p.name}\n` +
@@ -990,8 +1011,8 @@ export function answerDataQuestion(
         `- Status akun: ${p.isActive ? "aktif" : "nonaktif"}\n` +
         `- Bergabung sejak: ${p.joinedAt.toLocaleDateString("id-ID")}\n` +
         `- Laporan dibuat: ${p.reportCount} | Tugas ditugaskan: ${p.taskCount}\n` +
-        `- Notifikasi belum dibaca: ${p.unreadNotifications}\n` +
-        `- Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}`
+        `- Notifikasi belum dibaca: ${p.unreadNotifications}` +
+        telegramLine
       );
     }
 

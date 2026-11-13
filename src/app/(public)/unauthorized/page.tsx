@@ -8,56 +8,42 @@ export const metadata = {
 
 export default function UnauthorizedPage() {
   return (
-    <div className="flex items-center justify-center min-h-svh bg-gradient-to-br from-red-50 via-white to-orange-50 px-6">
-      <div className="text-center max-w-md">
-        {/* Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-3xl mb-6">
-          <ShieldX className="w-10 h-10 text-red-600" />
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12 sm:px-6">
+      <div className="w-full max-w-lg rounded-3xl border border-slate-200/80 bg-white/90 p-8 text-center shadow-xl shadow-slate-200/50 backdrop-blur sm:p-10">
+        <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600 ring-1 ring-red-100">
+          <ShieldX className="h-8 w-8" />
         </div>
-
-        {/* Error Code */}
-        <p className="text-xs font-bold text-red-400 tracking-widest uppercase mb-2">
-          Error 403
+        <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-red-500">Error 403</p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Akses ditolak</h1>
+        <p className="mt-3 text-sm leading-relaxed text-slate-500 sm:text-base">
+          Anda tidak memiliki izin untuk mengakses halaman ini. Silakan kembali atau masuk menggunakan akun dengan peran yang sesuai.
         </p>
 
-        {/* Title */}
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-4">
-          Akses Ditolak
-        </h1>
-
-        {/* Description */}
-        <p className="text-slate-500 mb-8 leading-relaxed">
-          Anda tidak memiliki izin untuk mengakses halaman ini. Halaman ini hanya dapat diakses oleh
-          pengguna dengan role tertentu.
-        </p>
-
-        {/* Info Box */}
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 text-left">
-          <p className="text-sm text-amber-800 font-medium mb-1">Apa yang bisa Anda lakukan?</p>
-          <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
-            <li>Kembali ke halaman sebelumnya</li>
-            <li>Login dengan akun yang sesuai</li>
-            <li>Hubungi admin jika Anda merasa ini kesalahan</li>
+        <div className="mt-7 rounded-2xl border border-amber-200/70 bg-amber-50/70 p-4 text-left">
+          <p className="text-sm font-semibold text-amber-900">Yang dapat Anda lakukan</p>
+          <ul className="mt-2 space-y-1.5 text-sm text-amber-800/90">
+            <li>• Kembali ke dashboard atau halaman sebelumnya</li>
+            <li>• Masuk dengan akun yang memiliki akses</li>
+            <li>• Hubungi administrator jika ini tidak sesuai</li>
           </ul>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/dashboard"
             id="btn-back-dashboard"
-            className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-6 py-3 rounded-xl border border-slate-200 hover:border-slate-300 transition-all shadow-sm"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
             Kembali ke Dashboard
           </Link>
           <Link
             href="/login"
             id="btn-login-other"
-            className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-sm"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700"
           >
-            <LogIn className="w-4 h-4" />
-            Login Akun Lain
+            <LogIn className="h-4 w-4" />
+            Masuk Akun Lain
           </Link>
         </div>
       </div>

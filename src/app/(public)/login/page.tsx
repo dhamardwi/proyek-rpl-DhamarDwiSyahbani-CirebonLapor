@@ -45,29 +45,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-svh bg-slate-50 px-6">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10 sm:px-6">
       <div className="w-full max-w-md">
-        <Card className="shadow-xl">
-          <CardHeader className="text-center pb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl mb-4">
-              <LogIn className="w-6 h-6 text-blue-600" />
+        <Card className="border-slate-200/80 shadow-xl shadow-slate-200/50">
+          <CardHeader className="space-y-3 pb-2 text-center">
+            <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+              <LogIn className="h-5 w-5" />
             </div>
-            <CardTitle className="text-xl font-bold text-slate-900">Masuk ke CirebonLapor</CardTitle>
-            <CardDescription className="text-sm text-slate-500">
-              Akses akun Anda untuk membuat dan memantau laporan
-            </CardDescription>
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">Masuk ke akun Anda</CardTitle>
+              <CardDescription className="text-sm text-slate-500">
+                Kelola dan pantau laporan fasilitas umum dengan mudah
+              </CardDescription>
+            </div>
           </CardHeader>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="w-4 h-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <CardContent>
+          <CardContent className="pt-4">
+            {error && (
+              <Alert variant="destructive" className="mb-5">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="email">Alamat Email</Label>
                 <Input
                   id="email"
@@ -77,12 +78,11 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@email.com"
-                  className="text-sm"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Kata Sandi</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -91,16 +91,16 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Masukkan password"
-                    className="text-sm pr-12"
+                    placeholder="Masukkan kata sandi"
+                    className="pr-11"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -109,16 +109,16 @@ export default function LoginPage() {
                 id="btn-login"
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 shadow-sm shadow-blue-100 hover:shadow-blue-200"
+                className="mt-2 h-11 w-full"
               >
                 {isLoading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     Memproses...
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4" />
+                    <LogIn className="h-4 w-4" />
                     Masuk
                   </>
                 )}
@@ -126,11 +126,11 @@ export default function LoginPage() {
             </form>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-3 pt-6">
+          <CardFooter className="flex flex-col border-t border-slate-100 pt-5">
             <p className="text-center text-sm text-slate-500">
               Belum punya akun?{" "}
-              <Link href="/register" className="text-blue-600 font-medium hover:underline">
-                Daftar Sekarang
+              <Link href="/register" className="font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                Daftar sekarang
               </Link>
             </p>
           </CardFooter>

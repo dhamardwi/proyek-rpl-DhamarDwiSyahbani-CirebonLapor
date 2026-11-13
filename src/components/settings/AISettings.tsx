@@ -73,11 +73,6 @@ function formatDate(value: string | null): string {
   });
 }
 
-const PROVIDER_ICONS: Record<AiProvider, React.ElementType> = {
-  NVIDIA: Bot,
-  GEMINI: Sparkles,
-};
-
 export default function AISettings({ initialProviders }: AISettingsProps) {
   const [providers, setProviders] = useState<AiProviderStatus[]>(initialProviders);
   const [forms, setForms] = useState<Record<AiProvider, ProviderForm>>(
@@ -85,7 +80,6 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
   );
   const [models, setModels] = useState<Record<AiProvider, string[]>>({
     NVIDIA: [],
-    GEMINI: [],
   });
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -249,18 +243,17 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
       {providers.map((status) => {
         const provider = status.provider;
         const form = forms[provider];
-        const Icon = PROVIDER_ICONS[provider];
         const listId = `model-options-${provider}`;
-        const modelOptions = models[provider];
+        const modelOptions = models[provider] ?? [];
         const test = tests[provider];
 
         return (
-          <Card key={provider}>
+          <Card key={provider} className="rounded-2xl border-slate-200/80 shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <Icon className="w-6 h-6" />
+                    <Bot className="w-6 h-6" />
                   </div>
                   <div>
                     <CardTitle className="text-lg font-semibold text-slate-900">
@@ -394,9 +387,8 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
                     ))}
                   </datalist>
                   <p className="mt-2 text-xs text-slate-500">
-                    {provider === "NVIDIA"
-                      ? "Katalog NVIDIA memuat banyak model; tidak semuanya dapat diakses API key ini. Muat daftar, pilih model chat, lalu Uji Koneksi sebelum dipakai."
-                      : "Gunakan model teks yang mendukung generateContent dan input gambar (default: gemini-3.6-flash). Daftar model diambil langsung dari API Gemini; model 2.5 lama sudah dibatasi untuk key baru. Jika model sedang sibuk (HTTP 503), aplikasi otomatis mencoba model cadangan."}
+                    Katalog NVIDIA memuat banyak model; tidak semuanya dapat diakses API key ini.
+                    Muat daftar, pilih model chat, lalu Uji Koneksi sebelum dipakai.
                   </p>
                 </div>
               </div>
@@ -491,7 +483,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
         );
       })}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
         <h3 className="font-semibold text-slate-900 flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-slate-400" />
           Catatan keamanan
@@ -500,8 +492,8 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
           <li>API key disimpan terenkripsi (AES-256-GCM) dan tidak pernah dikirim ke browser.</li>
           <li>Perubahan konfigurasi langsung dipakai backend tanpa perlu mengubah kode atau restart.</li>
           <li>
-            Bila provider gagal atau timeout, chatbot memakai jawaban lokal dan laporan tetap
-            dapat dikirim serta diperiksa dengan metode duplikat lokal.
+            Bila provider gagal atau timeout, chatbot memakai jawaban lokal. Pemeriksaan
+            duplikat laporan berjalan secara lokal (tanpa AI eksternal).
           </li>
           <li>Kosongkan kolom API key saat menyimpan untuk mempertahankan key yang sudah ada.</li>
         </ul>

@@ -85,140 +85,129 @@ export default function ReportsMapClient({ facilityTypes }: ReportsMapClientProp
   const defaultCenter: [number, number] = [-6.7320, 108.5523];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden">
-      
-      {/* Filter Sidebar / Topbar */}
-      <div className="bg-white border-b border-slate-200 p-4 shrink-0 shadow-sm z-10 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                Peta Kerusakan Fasilitas
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">Lihat sebaran laporan kerusakan dari masyarakat.</p>
+    <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden">
+      <div className="relative z-10 shrink-0 border-b border-slate-200/70 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Peta Sebaran Laporan</h1>
+              <p className="text-sm text-slate-500">Lihat distribusi laporan kerusakan fasilitas umum berdasarkan lokasi dan status.</p>
             </div>
-            
-            <button 
+            <button
               onClick={() => setRefreshTick((t) => t + 1)}
               disabled={isLoading}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-50 disabled:opacity-60"
             >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Segarkan Peta
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Muat Ulang
             </button>
           </div>
 
-          <div className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700">
-            <Filter className="w-4 h-4" /> Filter Peta:
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <select
-              value={filterFacility}
-              onChange={(e) => setFilterFacility(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Fasilitas</option>
-              {facilityTypes.map(ft => (
-                <option key={ft.id} value={ft.id}>{ft.name}</option>
-              ))}
-            </select>
-            
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Status</option>
-              {Object.entries(REPORT_STATUS_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-            
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Prioritas</option>
-              {Object.entries(PRIORITY_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-            
-            <select
-              value={filterDamageLevel}
-              onChange={(e) => setFilterDamageLevel(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-            >
-              <option value="">Semua Tingkat Kerusakan</option>
-              {Object.entries(DAMAGE_LEVEL_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
+          <div className="mt-4 rounded-2xl border border-slate-200/70 bg-slate-50/60 p-3 sm:p-4">
+            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Filter className="h-4 w-4 text-slate-400" /> Filter Peta
+            </div>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              <select
+                value={filterFacility}
+                onChange={(e) => setFilterFacility(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Semua Fasilitas</option>
+                {facilityTypes.map(ft => (
+                  <option key={ft.id} value={ft.id}>{ft.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Semua Status</option>
+                {Object.entries(REPORT_STATUS_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Semua Prioritas</option>
+                {Object.entries(PRIORITY_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterDamageLevel}
+                onChange={(e) => setFilterDamageLevel(e.target.value)}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="">Semua Tingkat Kerusakan</option>
+                {Object.entries(DAMAGE_LEVEL_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="flex-1 bg-slate-100 relative z-0">
-        <MapContainer 
-          center={defaultCenter} 
-          zoom={13} 
-          scrollWheelZoom={true} 
+      <div className="relative z-0 flex-1 bg-slate-100">
+        <MapContainer
+          center={defaultCenter}
+          zoom={13}
+          scrollWheelZoom={true}
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          
+
           {reports.map((report) => (
-            <Marker 
-              key={report.id} 
-              position={[report.latitude, report.longitude]} 
+            <Marker
+              key={report.id}
+              position={[report.latitude, report.longitude]}
               icon={customIcon}
             >
-              <Popup className="rounded-xl overflow-hidden shadow-xl border-0 p-0 m-0">
-                <div className="p-4 w-64">
-                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 mb-2">
+              <Popup className="rounded-xl">
+                <div className="w-64 p-1">
+                  <span className="mb-2 inline-flex rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-100">
                     {report.facilityType.name}
                   </span>
-                  
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 leading-tight line-clamp-2">
+                  <h3 className="mb-3 line-clamp-2 text-sm font-semibold leading-snug text-slate-900">
                     {report.title}
                   </h3>
-                  
-                  <div className="space-y-1.5 border-t border-slate-100 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-slate-500">Status</span>
-                      <span className="text-[11px] font-semibold text-slate-700">{REPORT_STATUS_LABELS[report.status as keyof typeof REPORT_STATUS_LABELS] || report.status}</span>
+                  <div className="space-y-1.5 border-t border-slate-100 pt-3 text-[11px]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Status</span>
+                      <span className="font-medium text-slate-700">{REPORT_STATUS_LABELS[report.status as keyof typeof REPORT_STATUS_LABELS] || report.status}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-slate-500">Prioritas</span>
-                      <span className="text-[11px] font-semibold text-slate-700">{PRIORITY_LABELS[report.priority as keyof typeof PRIORITY_LABELS] || report.priority}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Prioritas</span>
+                      <span className="font-medium text-slate-700">{PRIORITY_LABELS[report.priority as keyof typeof PRIORITY_LABELS] || report.priority}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] text-slate-500">Tingkat Kerusakan</span>
-                      <span className="text-[11px] font-semibold text-slate-700">{DAMAGE_LEVEL_LABELS[report.damageLevel as keyof typeof DAMAGE_LEVEL_LABELS] || report.damageLevel}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Kerusakan</span>
+                      <span className="font-medium text-slate-700">{DAMAGE_LEVEL_LABELS[report.damageLevel as keyof typeof DAMAGE_LEVEL_LABELS] || report.damageLevel}</span>
                     </div>
                   </div>
-
-                  
                 </div>
               </Popup>
             </Marker>
           ))}
         </MapContainer>
-        
-        {/* Laporan Count overlay */}
-        <div className="absolute bottom-6 right-6 bg-white/90 backdrop-blur px-4 py-2 rounded-xl shadow-lg border border-slate-200 z-[1000]">
-          <p className="text-sm font-medium text-slate-700">
-            Menampilkan <span className="font-bold text-blue-600">{reports.length}</span> laporan
+
+        <div className="absolute bottom-4 right-4 z-[1000] rounded-xl border border-slate-200/80 bg-white/90 px-3.5 py-2 shadow-lg backdrop-blur sm:bottom-6 sm:right-6">
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-blue-600">{reports.length}</span> laporan ditampilkan
           </p>
         </div>
       </div>
-
     </div>
   );
 }

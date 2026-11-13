@@ -39,7 +39,6 @@ model User {
   isActive  Boolean  @default(true) @map("is_active")
   phone     String?  @map("phone")
   address   String?  @map("address")
-  profileImage String? @map("profile_image")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

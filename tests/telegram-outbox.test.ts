@@ -44,9 +44,9 @@ function mockTelegramFetch(result: "ok" | "fail") {
 }
 
 async function createLinkedUser(chatId = "123456789") {
-  const user = await createTestUser("PETUGAS", "Petugas Uji");
+  const user = await createTestUser("MASYARAKAT", "Warga Uji");
   await db.telegramLink.create({
-    data: { userId: user.id, chatId, username: "petugas_uji" },
+    data: { userId: user.id, chatId, username: "warga_uji" },
   });
   return user;
 }

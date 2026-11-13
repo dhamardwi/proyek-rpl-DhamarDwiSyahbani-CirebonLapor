@@ -1,10 +1,9 @@
 /**
- * Konfigurasi provider AI (NVIDIA NIM & Google Gemini).
+ * Konfigurasi provider AI (NVIDIA NIM).
  *
  * Penyimpanan memakai tabel `app_settings` (key-value) yang sudah ada.
  * Kunci yang dipakai:
  *   - NVIDIA : ai.chatbot.apiKey / ai.chatbot.baseUrl / ai.chatbot.model / ai.chatbot.enabled
- *   - Gemini : ai.gemini.apiKey  / ai.gemini.baseUrl  / ai.gemini.model  / ai.gemini.enabled
  *
  * Fallback environment variable tetap didukung agar deployment lama berjalan.
  * Modul ini hanya boleh diimpor di server. API key tidak pernah diekspos ke
@@ -14,7 +13,7 @@
 import db from "@/lib/db";
 import { decryptSecret, encryptSecret } from "./crypto";
 
-export type AiProvider = "NVIDIA" | "GEMINI";
+export type AiProvider = "NVIDIA";
 
 interface SettingsKeys {
   apiKey: string;
@@ -57,36 +56,12 @@ export const AI_PROVIDERS: Record<AiProvider, AiProviderDefinition> = {
       model: ["ai.nvidia.model"],
     },
   },
-  GEMINI: {
-    label: "Google Gemini",
-    purpose: "Analisis foto & pemeriksaan laporan duplikat",
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta",
-    // Gemini 2.5 sudah deprecated dan akses API-nya dibatasi untuk key lama.
-    // gemini-3.6-flash stabil, mendukung teks + gambar, dan lebih jarang
-    // kelebihan beban dibanding 3.8 Flash yang bisa membalas HTTP 503.
-    model: "gemini-3.6-flash",
-    envApiKey: "GEMINI_API_KEY",
-    envBaseUrl: "GEMINI_BASE_URL",
-    envModel: "GEMINI_MODEL",
-    settings: {
-      apiKey: "ai.gemini.apiKey",
-      baseUrl: "ai.gemini.baseUrl",
-      model: "ai.gemini.model",
-      enabled: "ai.gemini.enabled",
-    },
-    legacySettings: {
-      apiKey: ["ai.duplicate.apiKey", "ai.vision.apiKey"],
-      baseUrl: ["ai.duplicate.baseUrl", "ai.vision.baseUrl"],
-      model: ["ai.duplicate.model", "ai.vision.model"],
-      enabled: ["ai.duplicate.enabled", "ai.vision.enabled"],
-    },
-  },
 };
 
-export const AI_PROVIDER_LIST: AiProvider[] = ["NVIDIA", "GEMINI"];
+export const AI_PROVIDER_LIST: AiProvider[] = ["NVIDIA"];
 
 export function isAiProvider(value: unknown): value is AiProvider {
-  return value === "NVIDIA" || value === "GEMINI";
+  return value === "NVIDIA";
 }
 
 function readEnv(name: string): string {
@@ -110,12 +85,9 @@ export function normalizeBaseUrl(
 export function normalizeModel(
   value: string | null | undefined,
   fallback: string,
-  provider: AiProvider
+  _provider: AiProvider
 ): string {
-  let model = (value ?? "").trim() || fallback;
-  // Gemini REST menerima nama tanpa prefix "models/".
-  if (provider === "GEMINI") model = model.replace(/^models\//, "");
-  return model;
+  return (value ?? "").trim() || fallback;
 }
 
 // ---------------------------------------------------------------------------

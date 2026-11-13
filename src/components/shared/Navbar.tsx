@@ -1,121 +1,146 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, Settings, User as UserIcon, Menu, MapPin } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, MapPin, Menu, X, LayoutDashboard, ChevronDown } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
+import { cn } from "@/lib/utils";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const role = session?.user?.role as string | undefined;
-  const isDashboard = typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard");
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const role = session?.user?.role?.toLowerCase();
+  const dashboardHref = role ? `/dashboard/${role}` : "/dashboard";
 
   return (
-    <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <div className="flex-shrink-0 flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">C</span>
+    <nav className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 text-xs font-bold text-white shadow-sm shadow-blue-600/20">
+                CL
               </div>
-              <span className="font-bold text-lg tracking-tight text-slate-900">
-                CirebonLapor
-              </span>
+              <span className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base">CirebonLapor</span>
             </Link>
           </div>
 
-          <div className="hidden sm:flex items-center gap-6">
-            <Link
-              href="/map"
-              className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-50"
-            >
-              <MapPin className="w-4 h-4 mr-1.5" />
-              Peta Sebaran
+          <div className="hidden items-center gap-1 md:flex">
+            <Link href="/map" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+              <MapPin className="h-4 w-4" /> Peta Sebaran
             </Link>
-            {!isDashboard && (
-              <Link
-                href="/login"
-                className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-50"
-              >
-                Masuk
+            {session && (
+              <Link href={dashboardHref} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+                <LayoutDashboard className="h-4 w-4" /> Dashboard
               </Link>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {status === "loading" ? (
-              <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
+              <div className="h-9 w-20 animate-pulse rounded-lg bg-slate-200" />
             ) : session ? (
               <>
-                <Link
-                  href="/settings/telegram"
-                  className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Pengaturan Telegram"
-                >
-                  <Settings className="w-5 h-5" />
-                </Link>
                 <NotificationDropdown />
-                <div className="relative group">
+                <div className="relative hidden sm:block" ref={userMenuRef}>
                   <button
-                    onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-medium text-sm border border-blue-100 hover:bg-blue-100 transition-colors"
+                    onClick={() => setIsUserMenuOpen((v) => !v)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-sm transition-all",
+                      isUserMenuOpen ? "border-blue-200 bg-blue-50/70" : "border-slate-200 bg-white hover:bg-slate-50"
+                    )}
                   >
-                    <UserIcon className="w-4 h-4" />
-                    <span className="hidden sm:block">{session.user?.name}</span>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                      <UserIcon className="h-4 w-4" />
+                    </div>
+                    <span className="max-w-[7rem] truncate font-medium text-slate-700">{session.user?.name}</span>
+                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", isUserMenuOpen && "rotate-180")} />
                   </button>
-
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-50 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="p-3 border-b border-slate-100">
-                        <p className="text-sm font-medium text-slate-900">
-                          {session.user?.name}
-                        </p>
-                        <p className="text-xs text-slate-500 capitalize">
-                          {session.user?.role}
-                        </p>
+                    <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-lg shadow-slate-200/60">
+                      <div className="px-3 py-2.5">
+                        <p className="truncate text-sm font-semibold text-slate-900">{session.user?.name}</p>
+                        <p className="text-xs capitalize text-slate-500">{session.user?.role?.toLowerCase()}</p>
                       </div>
-                      <Link
-                        href={`/dashboard/${session.user?.role?.toLowerCase()}/profile`}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
-                      >
-                        <UserIcon className="w-4 h-4 text-slate-500" />
-                        Manajemen Profil
+                      <div className="my-1 h-px bg-slate-100" />
+                      <Link href={dashboardHref} onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <LayoutDashboard className="h-4 w-4 text-slate-400" /> Dashboard
                       </Link>
-                      <Link
-                        href="/settings/telegram"
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
-                      >
-                        <Settings className="w-4 h-4 text-slate-500" />
-                        Pengaturan Telegram
+                      <Link href={`/dashboard/${role}/profile`} onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <UserIcon className="h-4 w-4 text-slate-400" /> Profil
                       </Link>
-                      <hr className="my-1 border-slate-100" />
-                      <button
-                        onClick={() => signOut()}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        Keluar
+                      <Link href="/settings/telegram" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <Settings className="h-4 w-4 text-slate-400" /> Pengaturan
+                      </Link>
+                      <div className="my-1 h-px bg-slate-100" />
+                      <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                        <LogOut className="h-4 w-4" /> Keluar
                       </button>
                     </div>
                   )}
                 </div>
               </>
             ) : (
-              <Link
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                Masuk
-              </Link>
+              <div className="hidden items-center gap-2 sm:flex">
+                <Link href="/login" className="inline-flex h-9 items-center rounded-lg px-3.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100">Masuk</Link>
+                <Link href="/register" className="inline-flex h-9 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700">Daftar</Link>
+              </div>
             )}
+            <button
+              onClick={() => setIsMobileOpen((v) => !v)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 md:hidden"
+              aria-label="Menu"
+            >
+              {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </div>
+
+      {isMobileOpen && (
+        <div className="border-t border-slate-200/70 bg-white px-4 py-3 md:hidden">
+          <div className="flex flex-col gap-1">
+            <Link href="/map" onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              <MapPin className="h-4 w-4 text-slate-400" /> Peta Sebaran
+            </Link>
+            {session ? (
+              <>
+                <Link href={dashboardHref} onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <LayoutDashboard className="h-4 w-4 text-slate-400" /> Dashboard
+                </Link>
+                <Link href={`/dashboard/${role}/profile`} onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <UserIcon className="h-4 w-4 text-slate-400" /> Profil
+                </Link>
+                <Link href="/settings/telegram" onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <Settings className="h-4 w-4 text-slate-400" /> Pengaturan
+                </Link>
+                <button onClick={() => signOut({ callbackUrl: "/login" })} className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
+                  <LogOut className="h-4 w-4" /> Keluar
+                </button>
+              </>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link href="/login" onClick={() => setIsMobileOpen(false)} className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 text-sm font-medium text-slate-700">Masuk</Link>
+                <Link href="/register" onClick={() => setIsMobileOpen(false)} className="inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 text-sm font-medium text-white">Daftar</Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

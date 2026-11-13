@@ -35,8 +35,8 @@ const priorityColors: Record<string, string> = {
 export default function AIAnalysisCard({ aiAnalysis, showForRole = "ADMIN" }: AIAnalysisCardProps) {
   if (!aiAnalysis) {
     return (
-      <Card className="border-slate-200">
-        <CardHeader className="pb-3 flex items-center gap-2">
+      <Card className="rounded-2xl border-slate-200/80 shadow-sm">
+        <CardHeader className="flex items-center gap-2 border-b border-slate-100 pb-4">
           <Brain className="w-3.5 h-3.5 text-slate-400" />
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Analisis AI
@@ -82,8 +82,8 @@ export default function AIAnalysisCard({ aiAnalysis, showForRole = "ADMIN" }: AI
   const confidenceColor = confidencePercent >= 80 ? "text-green-600" : confidencePercent >= 60 ? "text-yellow-600" : "text-red-500";
 
   return (
-    <Card className="border-blue-100 bg-blue-50/50">
-      <CardHeader className="pb-3 flex items-center justify-between">
+    <Card className="rounded-2xl border-blue-100 bg-blue-50/40 shadow-sm">
+      <CardHeader className="flex items-center justify-between border-b border-blue-100/70 pb-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-blue-500" />
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">

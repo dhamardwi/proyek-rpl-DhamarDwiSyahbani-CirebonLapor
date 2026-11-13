@@ -157,79 +157,60 @@ export default async function DashboardAdminPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard Administrator</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Ringkasan seluruh data pelaporan kerusakan fasilitas umum.
-            </p>
-          </div>
-          <Link
-            href="/admin/reports"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors"
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Kelola Laporan
-          </Link>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Dashboard Administrator</h1>
+          <p className="text-sm text-slate-500 sm:text-base">
+            Ringkasan dan analitik pelaporan fasilitas umum secara menyeluruh.
+          </p>
         </div>
+        <Link
+          href="/admin/reports"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700"
+        >
+          <ShieldAlert className="h-4 w-4" />
+          Kelola Laporan
+        </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           const TrendIcon = stat.trend?.up ? TrendingUp : TrendingDown;
           return (
-            <Card key={i} className="hover:shadow-xl transition-all group">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-lg ${stat.bg}`}>
-                    <Icon className={`w-5 h-5 ${stat.color}`} />
+            <Link key={i} href={stat.href} className="group block">
+              <Card className="h-full transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.bg}`}>
+                    <Icon className={`h-5 w-5 ${stat.color}`} />
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">
-                      {stat.label}
-                    </p>
-                  </div>
-                </div>
-                {stat.trend && (
-                  <div className="flex items-center gap-1">
-                    <TrendIcon className={`w-3 h-3 ${stat.trend.up ? "text-green-500" : "text-red-500"}`} />
-                    <span className={`text-xs font-semibold ${stat.trend.up ? "text-green-600" : "text-red-600"}`}>
+                  {stat.trend && (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${stat.trend.up ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                      <TrendIcon className="h-3 w-3" />
                       {stat.trend.value}
                     </span>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                {stat.trend && (
-                  <p className="text-xs text-slate-400 mt-1">{stat.trend.label}</p>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Link
-                  href={stat.href}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  Lihat detail <span className="w-3.5 h-3.5 text-slate-400">→</span>
-                </Link>
-              </CardFooter>
-            </Card>
+                  )}
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <p className="text-3xl font-bold tracking-tight text-slate-900">{stat.value}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-600">{stat.label}</p>
+                  {stat.trend && <p className="mt-1 text-xs text-slate-400">{stat.trend.label}</p>}
+                </CardContent>
+                <CardFooter className="border-t border-slate-100 pt-3 text-xs font-medium text-blue-600 group-hover:text-blue-700">
+                  Lihat detail →
+                </CardFooter>
+              </Card>
+            </Link>
           );
         })}
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <AdminCharts
-          statusData={statusData}
-          facilityData={facilityData}
-          damageData={damageData}
-        />
-      </div>
+      <AdminCharts
+        statusData={statusData}
+        facilityData={facilityData}
+        damageData={damageData}
+      />
     </div>
   );
 }

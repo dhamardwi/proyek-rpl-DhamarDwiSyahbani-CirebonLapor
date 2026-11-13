@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Lock, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { Lock, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
 
 interface PasswordFormProps {
   isLoading: boolean;
@@ -103,26 +103,21 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Ubah Password
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {serverError && (
-          <Alert variant="destructive">
-            <AlertDescription>{serverError}</AlertDescription>
-          </Alert>
-        )}
-        {success && (
-          <Alert variant="success">
-            <CheckCircle className="w-4 h-4" />
-            <AlertDescription>Password berhasil diubah. Silakan login lagi dengan password baru.</AlertDescription>
-          </Alert>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+    <div className="space-y-4">
+      {serverError && (
+        <Alert variant="destructive">
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
+      {success && (
+        <Alert variant="success">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>Password berhasil diubah. Gunakan password baru pada login berikutnya.</AlertDescription>
+        </Alert>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="pwd-current">Password Saat Ini</Label>
             <Input
               id="pwd-current"
@@ -130,12 +125,10 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
               type="password"
               value={formData.currentPassword}
               onChange={handleChange}
-              className={`w-full ${errors.currentPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.currentPassword ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.currentPassword && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.currentPassword}</p>
-            )}
+            {errors.currentPassword && <p className="text-xs text-red-600">{errors.currentPassword}</p>}
           </div>
 
           <div className="space-y-2">
@@ -146,12 +139,10 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
               type="password"
               value={formData.newPassword}
               onChange={handleChange}
-              className={`w-full ${errors.newPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.newPassword ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.newPassword && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.newPassword}</p>
-            )}
+            {errors.newPassword && <p className="text-xs text-red-600">{errors.newPassword}</p>}
           </div>
 
           <div className="space-y-2">
@@ -162,28 +153,24 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`w-full ${errors.confirmPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.confirmPassword ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.confirmPassword && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.confirmPassword}</p>
-            )}
+            {errors.confirmPassword && <p className="text-xs text-red-600">{errors.confirmPassword}</p>}
           </div>
+        </div>
 
+        <div className="flex justify-end pt-2">
           <Button
             type="submit"
             disabled={isLoading || isSubmitting || !session?.user}
-            className="w-full py-2.5 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto"
           >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Lock className="w-4 h-4" />
-            )}
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
             <span>{isSubmitting ? "Mengubah..." : "Ubah Password"}</span>
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      </form>
+    </div>
   );
 }

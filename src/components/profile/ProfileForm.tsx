@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
 
 interface ProfileFormProps {
   profile: {
@@ -94,15 +94,15 @@ export default function ProfileForm({
   };
 
   return (
-    <Card>
+    <div className="space-y-4">
       {serverError && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="destructive">
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       )}
-      <CardContent className="space-y-4">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="profile-name">Nama Lengkap</Label>
             <Input
               id="profile-name"
@@ -110,12 +110,10 @@ export default function ProfileForm({
               type="text"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full ${errors.name ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.name ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.name && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -126,12 +124,10 @@ export default function ProfileForm({
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full ${errors.email ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.email ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.email && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
           </div>
 
           <div className="space-y-2">
@@ -143,15 +139,13 @@ export default function ProfileForm({
               value={formData.phone}
               onChange={handleChange}
               placeholder="08123456789"
-              className={`w-full ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.phone ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.phone && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.phone}</p>
-            )}
+            {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="profile-address">Alamat</Label>
             <Textarea
               id="profile-address"
@@ -160,47 +154,42 @@ export default function ProfileForm({
               onChange={handleChange}
               rows={3}
               placeholder="Masukkan alamat lengkap"
-              className={`w-full ${errors.address ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100" : "border-slate-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-500"}`}
+              className={errors.address ? "border-red-400 bg-red-50 focus:ring-red-100" : ""}
               disabled={isLoading || isSubmitting}
             />
-            {errors.address && (
-              <p className="text-[10px] text-red-600 mt-1">{errors.address}</p>
-            )}
+            {errors.address && <p className="text-xs text-red-600">{errors.address}</p>}
           </div>
+        </div>
 
-          <div className="flex items-center gap-3 pt-3">
-            <Button
-              type="submit"
-              disabled={isLoading || isSubmitting || !session?.user}
-              className="flex-1 px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              <span>{isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}</span>
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                setFormData({
-                  name: profile.name,
-                  email: profile.email,
-                  phone: profile.phone,
-                  address: profile.address,
-                });
-                setErrors({});
-              }}
-              variant="outline"
-              size="sm"
-              disabled={isLoading || isSubmitting}
-            >
-              Batal
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            onClick={() => {
+              setFormData({
+                name: profile.name,
+                email: profile.email,
+                phone: profile.phone,
+                address: profile.address,
+              });
+              setErrors({});
+              setServerError(null);
+            }}
+            variant="outline"
+            disabled={isLoading || isSubmitting}
+            className="sm:w-auto"
+          >
+            Batal
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading || isSubmitting || !session?.user}
+            className="sm:w-auto"
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            <span>{isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}</span>
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

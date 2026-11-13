@@ -51,8 +51,8 @@ export default function DuplicateReportCard({ analyses }: DuplicateReportCardPro
   const distance = formatDistance(top.distanceMeters);
 
   return (
-    <Card className="border-amber-200 bg-amber-50/50">
-      <CardHeader className="pb-3 flex items-center gap-2">
+    <Card className="rounded-2xl border-amber-200 bg-amber-50/40 shadow-sm">
+      <CardHeader className="flex items-center gap-2 border-b border-amber-100/70 pb-4">
         <Copy className="w-3.5 h-3.5 text-amber-600" />
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-amber-700">
           Kemungkinan Laporan Duplikat

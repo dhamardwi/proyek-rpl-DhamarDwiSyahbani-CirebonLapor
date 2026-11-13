@@ -2,6 +2,9 @@ import db from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CreateReportForm from "./CreateReportForm";
 
 export const metadata = {
@@ -21,27 +24,27 @@ export default async function CreateReportPage() {
   });
 
   return (
-    <div className="space-y-8">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Buat Laporan Baru</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Laporkan fasilitas umum yang rusak agar dapat segera ditangani oleh petugas.
-            </p>
-          </div>
-          <a
-            href="/my-reports"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            <span className="w-3.5 h-3.5 text-slate-400">←</span> Lihat Laporan Saya
-          </a>
+    <div className="mx-auto w-full max-w-4xl space-y-6 sm:space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Buat Laporan Baru
+          </h1>
+          <p className="max-w-2xl text-sm text-slate-500 sm:text-base">
+            Sampaikan informasi kerusakan fasilitas umum secara lengkap agar proses verifikasi dan
+            penanganan dapat berjalan lebih cepat.
+          </p>
         </div>
+        <Button variant="secondary" size="sm" asChild className="w-full sm:w-auto">
+          <Link href="/my-reports">
+            <ArrowLeft className="h-4 w-4" />
+            Laporan Saya
+          </Link>
+        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
-        <CreateReportForm facilityTypes={facilityTypes} />
-      </div>
+      <CreateReportForm facilityTypes={facilityTypes} />
     </div>
   );
 }

@@ -118,12 +118,12 @@ test("/start tanpa token hanya menampilkan petunjuk", async () => {
 });
 
 test("/status menampilkan akun yang terhubung dan /disconnect memutus koneksi", async () => {
-  const user = await createTestUser("PETUGAS", "Petugas Webhook");
+  const user = await createTestUser("MASYARAKAT", "Warga Webhook");
   const { token } = await createLinkToken(user.id);
   await POST(webhookRequest(startUpdate(`/start ${token}`, "123123123")));
 
   await POST(webhookRequest(startUpdate("/status", "123123123")));
-  assert.match(replyTexts[replyTexts.length - 1], /Petugas Webhook/);
+  assert.match(replyTexts[replyTexts.length - 1], /Warga Webhook/);
 
   await POST(webhookRequest(startUpdate("/disconnect", "123123123")));
   assert.equal(await db.telegramLink.count(), 0);

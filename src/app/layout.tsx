@@ -14,10 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans">
+    <html lang="id" className="h-full">
+      <body className="min-h-full bg-[var(--background)] text-slate-900 font-sans antialiased">
         <Providers>
-          <main className="flex-grow">{children}</main>
+          <div className="relative flex min-h-screen flex-col">
+            {children}
+          </div>
           <ChatbotWidget />
         </Providers>
       </body>

@@ -8,7 +8,10 @@ export type CardProps = React.HTMLAttributes<HTMLDivElement>;
 const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("rounded-xl border border-slate-200 bg-white shadow-sm", className)}
+    className={cn(
+      "rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50",
+      className
+    )}
     {...props}
   />
 ));
@@ -33,7 +36,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn("text-2xl font-semibold leading-none tracking-tight text-slate-900", className)}
+      className={cn("text-base font-semibold leading-tight tracking-tight text-slate-900 sm:text-lg", className)}
       {...props}
     />
   )

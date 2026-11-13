@@ -58,6 +58,8 @@ export async function enqueueTelegramMessage(input: {
  * Mengantrekan pesan hanya jika pengguna sudah menautkan Telegram.
  * dedupeKey di-scope per pengguna agar event yang sama untuk beberapa
  * penerima tidak saling menimpa.
+ *
+ * Notifikasi Telegram tidak didukung untuk role ADMIN dan PETUGAS.
  */
 export async function enqueueTelegramForUser(params: {
   userId: string;
@@ -68,10 +70,11 @@ export async function enqueueTelegramForUser(params: {
 
   const link = await db.telegramLink.findUnique({
     where: { userId: params.userId },
-    select: { chatId: true },
+    select: { chatId: true, user: { select: { role: true } } },
   });
 
   if (!link) return false;
+  if (link.user.role === "ADMIN" || link.user.role === "PETUGAS") return false;
 
   return enqueueTelegramMessage({
     userId: params.userId,

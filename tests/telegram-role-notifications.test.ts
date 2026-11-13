@@ -16,10 +16,13 @@ async function createLinkedUser(role: string, name: string, isActive = true) {
   if (!isActive) {
     await db.user.update({ where: { id: user.id }, data: { isActive: false } });
   }
-  chatCounter += 1;
-  await db.telegramLink.create({
-    data: { userId: user.id, chatId: String(chatCounter) },
-  });
+  // Telegram hanya didukung untuk role MASYARAKAT.
+  if (role === "MASYARAKAT") {
+    chatCounter += 1;
+    await db.telegramLink.create({
+      data: { userId: user.id, chatId: String(chatCounter) },
+    });
+  }
   return user;
 }
 
@@ -39,7 +42,7 @@ after(async () => {
   await db.$disconnect();
 });
 
-test("laporan baru AUTO_ACCEPTED hanya mengirim ke pelapor, admin aktif, petugas aktif", async () => {
+test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin & petugas tidak menerima Telegram)", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const admin = await createLinkedUser("ADMIN", "Admin Aktif");
   const inactiveAdmin = await createLinkedUser("ADMIN", "Admin Nonaktif", false);
@@ -60,6 +63,7 @@ test("laporan baru AUTO_ACCEPTED hanya mengirim ke pelapor, admin aktif, petugas
 
   await notifyReportCreated(input);
 
+  // In-app notifications tetap dibuat sesuai logika bisnis
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(admin.id), 1);
   assert.equal(await notificationCount(inactiveAdmin.id), 0);
@@ -67,10 +71,11 @@ test("laporan baru AUTO_ACCEPTED hanya mengirim ke pelapor, admin aktif, petugas
   assert.equal(await notificationCount(inactivePetugas.id), 0);
   assert.equal(await notificationCount(otherCitizen.id), 0);
 
+  // Telegram hanya untuk masyarakat (pelapor)
   assert.equal(await outboxCount(reporter.id), 1);
-  assert.equal(await outboxCount(admin.id), 1);
+  assert.equal(await outboxCount(admin.id), 0);
   assert.equal(await outboxCount(inactiveAdmin.id), 0);
-  assert.equal(await outboxCount(petugas.id), 1);
+  assert.equal(await outboxCount(petugas.id), 0);
   assert.equal(await outboxCount(inactivePetugas.id), 0);
   assert.equal(await outboxCount(otherCitizen.id), 0);
 
@@ -86,7 +91,7 @@ test("laporan baru AUTO_ACCEPTED hanya mengirim ke pelapor, admin aktif, petugas
   assert.equal(await outboxCount(reporter.id), 1);
 });
 
-test("laporan baru yang menunggu verifikasi manual tidak mengirim ke petugas", async () => {
+test("laporan baru yang menunggu verifikasi manual: petugas tidak menerima in-app/Telegram", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const admin = await createLinkedUser("ADMIN", "Admin");
   const petugas = await createLinkedUser("PETUGAS", "Petugas");
@@ -105,10 +110,12 @@ test("laporan baru yang menunggu verifikasi manual tidak mengirim ke petugas", a
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(admin.id), 1);
   assert.equal(await notificationCount(petugas.id), 0);
+  assert.equal(await outboxCount(reporter.id), 1);
+  assert.equal(await outboxCount(admin.id), 0);
   assert.equal(await outboxCount(petugas.id), 0);
 });
 
-test("verifikasi admin mengirim ke pelapor dan semua petugas aktif", async () => {
+test("verifikasi admin: in-app ke pelapor & petugas aktif, Telegram hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin Pemeriksa");
   const petugasA = await createLinkedUser("PETUGAS", "Petugas A");
@@ -138,14 +145,16 @@ test("verifikasi admin mengirim ke pelapor dan semua petugas aktif", async () =>
   assert.equal(await notificationCount(petugasB.id), 1);
   assert.equal(await notificationCount(inactive.id), 0);
   assert.equal(await notificationCount(actor.id), 0);
+
   assert.equal(await outboxCount(reporter.id), 1);
-  assert.equal(await outboxCount(petugasA.id), 1);
+  assert.equal(await outboxCount(petugasA.id), 0);
+  assert.equal(await outboxCount(petugasB.id), 0);
 
   await notifyAdminReportAction(input);
   assert.equal(await notificationCount(reporter.id), 1);
 });
 
-test("penolakan admin mengirim alasan hanya ke pelapor", async () => {
+test("penolakan admin: notifikasi in-app & Telegram hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const petugas = await createLinkedUser("PETUGAS", "Petugas");
@@ -169,12 +178,13 @@ test("penolakan admin mengirim alasan hanya ke pelapor", async () => {
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(petugas.id), 0);
   assert.equal(await outboxCount(reporter.id), 1);
+  assert.equal(await outboxCount(petugas.id), 0);
 
   const outbox = await db.telegramOutbox.findFirst({ where: { userId: reporter.id } });
   assert.match(outbox?.message ?? "", /Foto terlalu buram\./);
 });
 
-test("penugasan hanya mengirim ke pelapor dan petugas yang ditugaskan", async () => {
+test("penugasan: in-app ke pelapor & petugas ditugaskan, Telegram hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const assignee = await createLinkedUser("PETUGAS", "Petugas Terpilih");
@@ -199,15 +209,11 @@ test("penugasan hanya mengirim ke pelapor dan petugas yang ditugaskan", async ()
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(assignee.id), 1);
   assert.equal(await notificationCount(otherPetugas.id), 0);
-  assert.equal(await outboxCount(assignee.id), 1);
-
-  const outbox = await db.telegramOutbox.findFirst({ where: { userId: assignee.id } });
-  assert.match(outbox?.message ?? "", /Penugasan Laporan Baru/);
-  assert.match(outbox?.message ?? "", /Lampu Jalan Mati/);
-  assert.match(outbox?.message ?? "", /Ditugaskan oleh: Admin/);
+  assert.equal(await outboxCount(reporter.id), 1);
+  assert.equal(await outboxCount(assignee.id), 0);
 });
 
-test("perubahan prioritas hanya mengirim ke petugas yang bertanggung jawab", async () => {
+test("perubahan prioritas: in-app ke petugas bertanggung jawab, tanpa Telegram ke petugas", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const assignee = await createLinkedUser("PETUGAS", "Petugas");
@@ -232,12 +238,10 @@ test("perubahan prioritas hanya mengirim ke petugas yang bertanggung jawab", asy
   assert.equal(await notificationCount(assignee.id), 1);
   assert.equal(await notificationCount(reporter.id), 0);
   assert.equal(await notificationCount(otherPetugas.id), 0);
-
-  const outbox = await db.telegramOutbox.findFirst({ where: { userId: assignee.id } });
-  assert.match(outbox?.message ?? "", /Kritis/);
+  assert.equal(await outboxCount(assignee.id), 0);
 });
 
-test("status pengerjaan mengirim ke pelapor, penyelesaian juga menginformasikan admin aktif", async () => {
+test("status pengerjaan: Telegram hanya ke pelapor, admin aktif hanya in-app saat selesai", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("PETUGAS", "Petugas Pelaksana");
   const admin = await createLinkedUser("ADMIN", "Admin Aktif");
@@ -261,6 +265,8 @@ test("status pengerjaan mengirim ke pelapor, penyelesaian juga menginformasikan 
 
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(admin.id), 0);
+  assert.equal(await outboxCount(reporter.id), 1);
+  assert.equal(await outboxCount(admin.id), 0);
 
   await notifyTaskStatusChanged({
     report,
@@ -275,9 +281,5 @@ test("status pengerjaan mengirim ke pelapor, penyelesaian juga menginformasikan 
   assert.equal(await notificationCount(admin.id), 1);
   assert.equal(await notificationCount(inactiveAdmin.id), 0);
   assert.equal(await outboxCount(reporter.id), 2);
-  assert.equal(await outboxCount(admin.id), 1);
-
-  const adminOutbox = await db.telegramOutbox.findFirst({ where: { userId: admin.id } });
-  assert.match(adminOutbox?.message ?? "", /Laporan Selesai Ditangani/);
-  assert.match(adminOutbox?.message ?? "", /Petugas Pelaksana/);
+  assert.equal(await outboxCount(admin.id), 0);
 });

@@ -6,7 +6,7 @@ import AISettings from "@/components/settings/AISettings";
 
 export const metadata = {
   title: "Konfigurasi AI - CirebonLapor",
-  description: "Kelola konfigurasi NVIDIA NIM dan Google Gemini",
+  description: "Kelola konfigurasi NVIDIA NIM untuk chatbot",
 };
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,12 @@ export default async function AISettingsPage() {
   const providers = await getAiProviderStatuses();
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Konfigurasi AI</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Atur API key, endpoint, dan model yang dipakai chatbot serta analisis laporan.
-          API key disimpan terenkripsi dan tidak pernah dikirim ke browser.
+    <div className="space-y-6 sm:space-y-8">
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Pengaturan Sistem</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Konfigurasi AI</h1>
+        <p className="max-w-3xl text-sm text-slate-500 sm:text-base">
+          Atur API key, endpoint, dan model yang dipakai chatbot CirebonLapor. API key disimpan terenkripsi dan tidak pernah dikirim ke browser.
         </p>
       </div>
 

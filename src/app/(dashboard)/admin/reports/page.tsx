@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const VALID_PRIORITIES = new Set<string>(Object.values(PRIORITY));
 
@@ -111,142 +111,132 @@ export default async function AdminReportsPage({
   ].filter(Boolean).join("&");
 
   return (
-    <div className="space-y-8">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Manajemen Laporan</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Kelola dan pantau seluruh laporan dari masyarakat
-            </p>
-          </div>
-          <Link
-            href="/admin/reports"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-          >
-            <ChevronRight className="w-3.5 h-3.5" /> Kembali
-          </Link>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Administrasi</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Manajemen Laporan</h1>
+          <p className="max-w-2xl text-sm text-slate-500 sm:text-base">
+            Kelola, filter, dan tinjau seluruh laporan masyarakat dalam satu tampilan yang rapi.
+          </p>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-            Filter & Pencarian
-          </CardTitle>
+      <Card className="rounded-2xl border-slate-200/80 shadow-sm">
+        <CardHeader className="border-b border-slate-100 pb-4">
+          <CardTitle className="text-base font-semibold text-slate-900">Filter & Pencarian</CardTitle>
+          <p className="mt-0.5 text-sm text-slate-500">Saring laporan berdasarkan kata kunci, status, atau fasilitas.</p>
         </CardHeader>
-        <CardContent className="pb-6">
-          <form className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <Input
-                type="text"
-                name="q"
-                defaultValue={query}
-                placeholder="Cari ID, judul, alamat, pelapor..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none"
-              />
+        <CardContent className="pt-5">
+          <form className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_220px_220px_auto] lg:items-end">
+            <div className="space-y-1.5">
+              <Label htmlFor="q" className="sr-only">Pencarian</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="q"
+                  type="text"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Cari ID, judul, alamat, atau pelapor..."
+                  className="h-10 pl-10"
+                />
+              </div>
             </div>
-            <Select
-              name="status"
-              defaultValue={statusFilter || "ALL"}
-              className="w-full sm:w-auto max-w-[200px] text-sm"
-            >
-              <option value="ALL">Semua Status</option>
-              {Object.entries(REPORT_STATUS_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-            <Select
-              name="facility"
-              defaultValue={facilityFilter || "ALL"}
-              className="w-full sm:w-auto max-w-[200px] text-sm"
-            >
-              <option value="ALL">Semua Fasilitas</option>
-              {facilities.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit" className="text-sm">
-              Filter
-            </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="status" className="sr-only">Status</Label>
+              <Select id="status" name="status" defaultValue={statusFilter || "ALL"} className="h-10">
+                <option value="ALL">Semua Status</option>
+                {Object.entries(REPORT_STATUS_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="facility" className="sr-only">Fasilitas</Label>
+              <Select id="facility" name="facility" defaultValue={facilityFilter || "ALL"} className="h-10">
+                <option value="ALL">Semua Fasilitas</option>
+                {facilities.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </Select>
+            </div>
+            <Button type="submit" className="h-10 w-full lg:w-auto lg:min-w-[104px]">Terapkan</Button>
           </form>
           {priorityFilter.length > 0 && (
-            <div className="mt-4 flex items-center gap-2 text-xs">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
               <span className="text-slate-500">Filter prioritas aktif:</span>
-              <span className="font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full">
+              <span className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 font-semibold text-orange-700">
                 {priorityFilter.join(", ")}
               </span>
               <Link
                 href={`/admin/reports?${baseQuery.replace(priorityQuery, "").replace(/^&/, "") || ""}`}
-                className="text-blue-600 hover:underline font-medium"
+                className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
               >
-                Hapus filter prioritas
+                Hapus filter
               </Link>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <Card className="overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
+        <CardHeader className="flex flex-col gap-3 border-b border-slate-100 bg-white/80 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-              Daftar Laporan ({total})
+              Daftar Laporan
             </CardTitle>
+            <p className="mt-1 text-sm text-slate-500">Total {total} laporan ditemukan</p>
           </div>
           {priorityFilter.length > 0 && (
-            <Badge variant="primary">
-              {priorityFilter.join(", ")}
+            <Badge variant="primary" className="w-fit">
+              Prioritas: {priorityFilter.join(", ")}
             </Badge>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">ID</TableHead>
-                  <TableHead>Info Laporan</TableHead>
-                  <TableHead className="w-48">Status & Prioritas</TableHead>
-                  <TableHead className="w-32">Petugas</TableHead>
-                  <TableHead className="w-20 text-right">Aksi</TableHead>
+            <Table className="min-w-[820px]">
+              <TableHeader className="bg-slate-50/80">
+                <TableRow className="border-slate-100 hover:bg-transparent">
+                  <TableHead className="w-24 px-5">ID</TableHead>
+                  <TableHead className="px-5">Info Laporan</TableHead>
+                  <TableHead className="w-52 px-5">Status & Prioritas</TableHead>
+                  <TableHead className="w-40 px-5">Petugas</TableHead>
+                  <TableHead className="w-24 px-5 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                      Tidak ada data laporan yang ditemukan.
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={5} className="px-6 py-16 text-center">
+                      <div className="mx-auto max-w-md space-y-2">
+                        <p className="text-base font-semibold text-slate-800">Tidak ada laporan ditemukan</p>
+                        <p className="text-sm text-slate-500">Coba ubah kata kunci atau filter untuk melihat hasil lainnya.</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   reports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="font-mono text-xs">
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded">
+                    <TableRow key={report.id} className="border-slate-100 transition-colors hover:bg-slate-50/70">
+                      <TableCell className="px-5 py-4 align-top font-mono text-xs">
+                        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-600">
                           #{report.id.slice(-6).toUpperCase()}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-5 py-4">
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-900 line-clamp-1">
+                          <span className="line-clamp-1 font-medium text-slate-900">
                             {report.title}
                           </span>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                            <span className="text-blue-600 font-medium">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                            <span className="font-medium text-blue-600">
                               {report.facilityType.name}
                             </span>
                             <span className="text-slate-300">•</span>
                             <span>Oleh: {report.user.name}</span>
                           </div>
-                          <span className="text-xs text-slate-400 mt-1">
+                          <span className="mt-1.5 text-xs text-slate-400">
                             {new Date(report.createdAt).toLocaleDateString("id-ID", {
                               day: "numeric",
                               month: "short",
@@ -255,8 +245,8 @@ export default async function AdminReportsPage({
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="flex flex-col gap-2 items-start">
+                      <TableCell className="px-5 py-4 align-top">
+                        <div className="flex flex-col items-start gap-2">
                           <Badge
                             variant={
                               report.status === "SELESAI"
@@ -272,25 +262,26 @@ export default async function AdminReportsPage({
                           </Badge>
                           {report.priority !== "RENDAH" && (
                             <span className={`text-xs font-medium ${priorityColors[report.priority]}`}>
-                              P: {PRIORITY_LABELS[report.priority as Priority]}
+                              Prioritas: {PRIORITY_LABELS[report.priority as Priority]}
                             </span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell className="px-5 py-4 align-top">
                         {report.assignee ? (
-                          <span className="text-sm text-slate-700">{report.assignee.name}</span>
+                          <span className="text-sm font-medium text-slate-700">{report.assignee.name}</span>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Belum ditugaskan</span>
+                          <span className="text-xs italic text-slate-400">Belum ditugaskan</span>
                         )}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-right">
+                      <TableCell className="px-5 py-4 text-right align-top">
                         <Link
                           href={`/admin/reports/${report.id}`}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-blue-50"
                           title="Lihat Detail"
+                          aria-label={`Lihat detail laporan ${report.id}`}
                         >
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronRight className="h-4 w-4" />
                         </Link>
                       </TableCell>
                     </TableRow>
@@ -299,42 +290,42 @@ export default async function AdminReportsPage({
               </TableBody>
             </Table>
           </div>
-
-          {/* Pagination */}
           {totalPages > 1 && (
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
-                    <p className="text-sm text-slate-600">
-                      Menampilkan {((page - 1) * perPage + 1) || 0} -{" "}
-                      {Math.min(page * perPage, total)} dari {total} laporan
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {page > 1 && (
-                        <Link
-                          href={`/admin/reports?page=${page - 1}${baseQuery ? `&${baseQuery}` : ""}`}
-                          className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-50"
-                        >
-                          Sebelumnya
-                        </Link>
-                      )}
-                      <p className="px-3 py-1.5 text-sm text-slate-600">
-                        Halaman {page} dari {totalPages}
-                      </p>
-                      {page < totalPages && (
-                        <Link
-                          href={`/admin/reports?page=${page + 1}${baseQuery ? `&${baseQuery}` : ""}`}
-                          className="px-3 py-1.5 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-50"
-                        >
-                          Selanjutnya
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            </TableFooter>
+            <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600">
+                Menampilkan <span className="font-medium text-slate-900">{((page - 1) * perPage + 1) || 0}</span> -{" "}
+                <span className="font-medium text-slate-900">{Math.min(page * perPage, total)}</span> dari{" "}
+                <span className="font-medium text-slate-900">{total}</span> laporan
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href={page > 1 ? `/admin/reports?page=${page - 1}${baseQuery ? `&${baseQuery}` : ""}` : "#"}
+                  aria-disabled={page <= 1}
+                  className={`inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
+                    page > 1
+                      ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      : "pointer-events-none border-slate-100 bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  Sebelumnya
+                </Link>
+                <p className="px-2 text-sm text-slate-600">
+                  Halaman <span className="font-medium text-slate-900">{page}</span> dari{" "}
+                  <span className="font-medium text-slate-900">{totalPages}</span>
+                </p>
+                <Link
+                  href={page < totalPages ? `/admin/reports?page=${page + 1}${baseQuery ? `&${baseQuery}` : ""}` : "#"}
+                  aria-disabled={page >= totalPages}
+                  className={`inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
+                    page < totalPages
+                      ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      : "pointer-events-none border-slate-100 bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  Selanjutnya
+                </Link>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

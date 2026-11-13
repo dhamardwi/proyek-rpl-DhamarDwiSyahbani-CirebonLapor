@@ -1,11 +1,11 @@
 import { PropsWithChildren } from "react";
 import Navbar from "@/components/shared/Navbar";
 
-export default function PublicLayout({ children }: PropsWithChildren<{}>) {
+export default function PublicLayout({ children }: PropsWithChildren) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="app-bg flex min-h-screen flex-col">
       <Navbar />
-      <main className="flex-grow">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }

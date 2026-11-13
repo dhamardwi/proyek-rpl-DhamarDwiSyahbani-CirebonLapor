@@ -55,7 +55,6 @@ export async function GET(req: NextRequest) {
           isActive: true,
           phone: true,
           address: true,
-          profileImage: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -86,7 +85,6 @@ export async function GET(req: NextRequest) {
           isActive: u.isActive,
           phone: u.phone ?? "",
           address: u.address ?? "",
-          profileImage: u.profileImage ?? null,
           reportCount: u._count.reports,
           taskCount: u._count.assignments,
           telegramConnected: !!u.telegramLink,

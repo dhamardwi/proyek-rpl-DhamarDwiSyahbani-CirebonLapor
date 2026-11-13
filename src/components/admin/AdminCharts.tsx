@@ -23,8 +23,8 @@ export default function AdminCharts({ statusData, facilityData, damageData }: Ch
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       {/* Bar Chart - Laporan per Status */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-900 mb-6">Laporan Berdasarkan Status</h3>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+        <h3 className="mb-6 text-base font-semibold text-slate-900 sm:text-lg">Laporan Berdasarkan Status</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
@@ -50,8 +50,8 @@ export default function AdminCharts({ statusData, facilityData, damageData }: Ch
       </div>
 
       {/* Pie Chart - Laporan per Jenis Fasilitas */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-900 mb-6">Laporan Berdasarkan Fasilitas</h3>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+        <h3 className="mb-6 text-base font-semibold text-slate-900 sm:text-lg">Laporan Berdasarkan Fasilitas</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -94,8 +94,8 @@ export default function AdminCharts({ statusData, facilityData, damageData }: Ch
       </div>
 
       {/* Bar Chart - Tingkat Kerusakan */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
-        <h3 className="text-lg font-bold text-slate-900 mb-6">Laporan Berdasarkan Tingkat Kerusakan</h3>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 lg:col-span-2">
+        <h3 className="mb-6 text-base font-semibold text-slate-900 sm:text-lg">Laporan Berdasarkan Tingkat Kerusakan</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={damageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

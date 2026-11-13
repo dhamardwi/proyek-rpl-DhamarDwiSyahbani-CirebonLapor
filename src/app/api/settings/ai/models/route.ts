@@ -30,7 +30,7 @@ async function requireAdmin() {
 }
 
 const schema = z.object({
-  provider: z.enum(["NVIDIA", "GEMINI"]),
+  provider: z.enum(["NVIDIA"]),
   apiKey: z.string().max(1000).optional().nullable(),
   baseUrl: z.string().max(1000).optional().nullable(),
 });

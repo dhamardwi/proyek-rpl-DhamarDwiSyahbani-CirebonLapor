@@ -27,7 +27,6 @@ export async function GET() {
         role: true,
         phone: true,
         address: true,
-        profileImage: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -60,7 +59,6 @@ export async function GET() {
         role: user.role,
         phone: user.phone ?? "",
         address: user.address ?? "",
-        profileImage: user.profileImage ?? null,
         isActive: user.isActive,
         reportCount: user._count.reports,
         taskCount: user._count.assignments,
@@ -139,7 +137,6 @@ export async function PUT(req: NextRequest) {
         role: true,
         phone: true,
         address: true,
-        profileImage: true,
         updatedAt: true,
       },
     });
@@ -154,7 +151,6 @@ export async function PUT(req: NextRequest) {
         role: updatedUser.role,
         phone: updatedUser.phone ?? "",
         address: updatedUser.address ?? "",
-        profileImage: updatedUser.profileImage ?? null,
         updatedAt: updatedUser.updatedAt,
       },
     });

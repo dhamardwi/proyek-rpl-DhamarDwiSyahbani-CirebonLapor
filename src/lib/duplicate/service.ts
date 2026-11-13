@@ -11,8 +11,6 @@
  */
 
 import db from "@/lib/db";
-import { getAiConfig } from "@/lib/ai/config";
-import { generateGeminiContent } from "@/lib/ai/gemini";
 import { imageHashSimilarity } from "./image-hash";
 
 export interface DuplicateCheckInput {
@@ -194,96 +192,7 @@ function formatDistance(distance: number | null): string {
   return `${(distance / 1000).toFixed(1)} km dari laporan lain`;
 }
 
-interface GeminiDuplicateResponse {
-  duplicateReportId?: string;
-  isDuplicate?: boolean;
-  confidence?: number;
-  reason?: string;
-}
 
-async function confirmWithGemini(
-  input: DuplicateCheckInput,
-  candidates: DuplicateCandidate[]
-): Promise<{ reportId: string; confidence: number; reason: string } | null> {
-  const config = await getAiConfig("GEMINI");
-  if (!config.isActive || !config.apiKey) return null;
-
-  const shortlist = candidates.slice(0, 5);
-  if (shortlist.length === 0) return null;
-
-  const prompt = [
-    "Kamu memeriksa apakah sebuah laporan kerusakan fasilitas umum duplikat dengan laporan yang sudah ada.",
-    "Bandingkan laporan BARU dengan KANDIDAT. Dua laporan dianggap duplikat jika merujuk kerusakan yang sama di lokasi yang sama.",
-    "Jawab HANYA dengan JSON tanpa markdown:",
-    '{"duplicateReportId":"<id kandidat atau string kosong>","isDuplicate":true|false,"confidence":0.0-1.0,"reason":"alasan singkat"}',
-    "",
-    "LAPORAN BARU:",
-    `- Judul: ${input.title}`,
-    `- Deskripsi: ${(input.description ?? "").slice(0, 600)}`,
-    `- Koordinat: ${input.latitude ?? "-"}, ${input.longitude ?? "-"}`,
-    "",
-    "KANDIDAT:",
-    ...shortlist.map(
-      (candidate, index) =>
-        `${index + 1}. id=${candidate.reportId} | judul=${candidate.title.slice(0, 160)} | ` +
-        `skorLokal=${candidate.score.toFixed(2)} | ${formatDistance(candidate.distanceMeters)} | ` +
-        `status=${candidate.status}`
-    ),
-  ].join("\n");
-
-  try {
-    const result = await generateGeminiContent({
-      apiKey: config.apiKey,
-      baseUrl: config.baseUrl,
-      model: config.model,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      maxOutputTokens: 1536,
-      json: true,
-      timeoutMs: 20_000,
-    });
-
-    if (!result.ok) {
-      console.warn(
-        "[DUPLICATE] Gemini menolak permintaan:",
-        result.status === 0 ? "timeout/tidak terhubung" : `HTTP ${result.status}`
-      );
-      return null;
-    }
-
-    if (result.fallbackFrom) {
-      console.warn(
-        `[DUPLICATE] Model "${result.fallbackFrom}" tidak tersedia/sibuk; ` +
-          `memakai fallback "${result.usedModel}".`
-      );
-    }
-
-    const text = result.text;
-
-    if (!text) return null;
-
-    const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
-    const parsed = JSON.parse(cleaned) as GeminiDuplicateResponse;
-
-    const validIds = new Set(shortlist.map((candidate) => candidate.reportId));
-    const reportId = parsed.duplicateReportId ?? "";
-    if (!parsed.isDuplicate || !validIds.has(reportId)) return null;
-
-    const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
-    if (confidence < 0.6) return null;
-
-    return {
-      reportId,
-      confidence,
-      reason: (parsed.reason ?? "Gemini menilai laporan ini duplikat.").slice(0, 300),
-    };
-  } catch (error) {
-    console.warn(
-      "[DUPLICATE] Konfirmasi Gemini gagal, memakai hasil lokal:",
-      error instanceof Error ? error.message : "unknown"
-    );
-    return null;
-  }
-}
 
 /**
  * Jalankan pemeriksaan duplikat tanpa menyimpan hasil ke database.
@@ -377,22 +286,6 @@ export async function checkDuplicateReport(
     const locallyDuplicate =
       best.score >= DUPLICATE_THRESHOLD ||
       best.imageSimilarity >= IMAGE_IDENTICAL_THRESHOLD;
-
-    const gemini = locallyDuplicate || best.score >= 0.45
-      ? await confirmWithGemini(input, candidates)
-      : null;
-
-    if (gemini) {
-      const confirmed = candidates.find((candidate) => candidate.reportId === gemini.reportId);
-      return {
-        isDuplicate: true,
-        method: "GEMINI",
-        score: Math.max(gemini.confidence, confirmed?.score ?? 0),
-        reportId: gemini.reportId,
-        reason: gemini.reason,
-        candidates,
-      };
-    }
 
     return {
       isDuplicate: locallyDuplicate,

@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ShieldCheck,
   CheckCircle2,
+  ImageOff,
 } from "lucide-react";
 import {
   REPORT_STATUS_LABELS,
@@ -20,17 +21,18 @@ import {
   type ReportStatus,
   type Priority,
 } from "@/lib/constants";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-const statusColors: Record<string, string> = {
-  MENUNGGU_VERIFIKASI: "bg-yellow-100 text-yellow-700",
-  DIPROSES_AI: "bg-blue-100 text-blue-700",
-  DITERIMA: "bg-teal-100 text-teal-700",
-  DITOLAK: "bg-red-100 text-red-700",
-  DITUGASKAN: "bg-indigo-100 text-indigo-700",
-  SEDANG_DIPERBAIKI: "bg-orange-100 text-orange-700",
-  SELESAI: "bg-green-100 text-green-700",
+const statusVariant: Record<string, "warning" | "primary" | "success" | "danger" | "default"> = {
+  MENUNGGU_VERIFIKASI: "warning",
+  DIPROSES_AI: "primary",
+  DITERIMA: "primary",
+  DITOLAK: "danger",
+  DITUGASKAN: "primary",
+  SEDANG_DIPERBAIKI: "warning",
+  SELESAI: "success",
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -78,39 +80,38 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
   const perbaikanImage = report.images.find((img) => img.imageType === "BUKTI_PERBAIKAN");
 
   return (
-    <div className="space-y-8">
-      <Link
-        href="/my-reports"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors mb-2"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Kembali ke Laporan Saya
-      </Link>
+    <div className="space-y-6 sm:space-y-8">
+      {/* Back */}
+      <Button variant="ghost" size="sm" asChild className="-ml-2 text-slate-600">
+        <Link href="/my-reports">
+          <ArrowLeft className="h-4 w-4" />
+          Kembali ke Laporan Saya
+        </Link>
+      </Button>
 
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Badge variant={report.status === "SELESAI" ? "success" : report.status === "DITOLAK" ? "danger" : report.status === "DITERIMA" || report.status === "DITUGASKAN" ? "primary" : "warning"}
-            >
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={statusVariant[report.status] || "default"}>
               {REPORT_STATUS_LABELS[report.status as ReportStatus] || report.status}
             </Badge>
-            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100">
               {report.facilityType.name}
             </span>
             {report.priority !== "RENDAH" && (
-              <span className="text-xs font-medium text-orange-700 bg-orange-50 px-2 py-1 rounded flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" />
-                Prioritas: {PRIORITY_LABELS[report.priority as Priority] || report.priority}
+              <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-100">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Prioritas {PRIORITY_LABELS[report.priority as Priority] || report.priority}
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             {report.title}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 text-slate-400" />
               {new Date(report.createdAt).toLocaleDateString("id-ID", {
                 day: "numeric",
                 month: "long",
@@ -119,85 +120,80 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                 minute: "2-digit",
               })}
             </span>
-            <span className="flex items-center gap-1.5 font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">
               #{report.id.slice(-6).toUpperCase()}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content (Left) */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Photos */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+        {/* Main Content */}
+        <div className="space-y-6 lg:col-span-2 lg:space-y-8">
+          {/* Foto & Deskripsi */}
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/60">
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-600">
                 Foto Kerusakan
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-0">
-              <div className="relative w-full h-64 sm:h-96 bg-slate-100 overflow-hidden">
-                {kerusakanImage ? (
-                  <img
-                    src={kerusakanImage.imagePath}
-                    alt="Foto Kerusakan"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    Tidak ada foto
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6">
-                <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-3">
-                  Deskripsi Laporan
-                </h3>
-                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
-                  {report.description || "Tidak ada deskripsi."}
-                </p>
-              </div>
+            <div className="relative h-64 w-full bg-slate-100 sm:h-80 lg:h-96">
+              {kerusakanImage ? (
+                <img
+                  src={kerusakanImage.imagePath}
+                  alt="Foto Kerusakan"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
+                  <ImageOff className="h-8 w-8" />
+                  <span className="text-sm">Tidak ada foto</span>
+                </div>
+              )}
+            </div>
+            <CardContent className="space-y-3 pt-6">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                Deskripsi Laporan
+              </h3>
+              <p className="whitespace-pre-wrap leading-relaxed text-slate-700">
+                {report.description || "Tidak ada deskripsi."}
+              </p>
             </CardContent>
           </Card>
 
-          {/* Bukti Perbaikan (jika ada) */}
+          {/* Bukti Perbaikan */}
           {perbaikanImage && (
-            <Card className="border-green-100/50">
-              <CardHeader className="pb-3 border-b border-green-100 bg-green-50/50">
+            <Card className="overflow-hidden border-green-200/70">
+              <CardHeader className="border-b border-green-100 bg-green-50/60">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <CardTitle className="text-sm font-semibold text-green-900 uppercase tracking-wider">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <CardTitle className="text-sm font-semibold uppercase tracking-wider text-green-800">
                     Bukti Perbaikan Selesai
                   </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="relative w-full h-64 sm:h-96 bg-white p-4">
-                  <img
-                    src={perbaikanImage.imagePath}
-                    alt="Bukti Perbaikan"
-                    className="w-full h-full object-contain rounded-lg"
-                  />
-                </div>
-              </CardContent>
+              <div className="relative h-64 w-full bg-white p-4 sm:h-80 lg:h-96">
+                <img
+                  src={perbaikanImage.imagePath}
+                  alt="Bukti Perbaikan"
+                  className="h-full w-full rounded-xl object-contain"
+                />
+              </div>
             </Card>
           )}
 
-          {/* Location */}
+          {/* Lokasi */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-600">
+                <MapPin className="h-4 w-4 text-slate-400" />
                 Lokasi Kejadian
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-slate-700 mb-4">{report.address}</p>
-
+            <CardContent className="space-y-4 pt-6">
+              <p className="text-sm leading-relaxed text-slate-700 sm:text-base">{report.address}</p>
               {report.latitude && report.longitude && (
-                <div className="h-64 w-full rounded-lg border border-slate-200 overflow-hidden">
+                <div className="h-64 w-full overflow-hidden rounded-xl border border-slate-200/80 sm:h-72">
                   <ReadOnlyMapDynamic position={[report.latitude, report.longitude]} />
                 </div>
               )}
@@ -205,25 +201,25 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
           </Card>
         </div>
 
-        {/* Sidebar (Right) */}
+        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Assignee Card */}
+          {/* Petugas */}
           {report.assignee && (
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-600">
+                  <User className="h-4 w-4 text-slate-400" />
                   Petugas Penanggung Jawab
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-lg">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-700 ring-4 ring-blue-50">
                     {report.assignee.name.charAt(0)}
                   </div>
-                  <div>
-                    <p className="font-medium text-slate-900">{report.assignee.name}</p>
-                    <p className="text-xs text-slate-500 capitalize">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{report.assignee.name}</p>
+                    <p className="text-xs capitalize text-slate-500">
                       {report.assignee.role.toLowerCase()}
                     </p>
                   </div>
@@ -232,34 +228,37 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
             </Card>
           )}
 
-          {/* Timeline / Status History */}
+          {/* Timeline */}
           <Card>
-            <CardHeader className="pb-6">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-600">
+                <Clock className="h-4 w-4 text-slate-400" />
                 Riwayat Status
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-0">
+            <CardContent className="pt-6">
               <div className="space-y-6">
                 {report.statusHistory.map((history, idx) => {
                   const isLatest = idx === 0;
                   return (
-                    <div key={history.id} className="relative pl-6">
-                      {/* Line connecting dots */}
+                    <div key={history.id} className="relative pl-7">
                       {idx !== report.statusHistory.length - 1 && (
-                        <div className="absolute left-[9px] top-6 bottom-[-24px] w-0.5 bg-slate-100" />
+                        <div className="absolute bottom-[-24px] left-[9px] top-6 w-px bg-slate-200" />
                       )}
-
-                      {/* Dot */}
-                      <div className={`absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white ${isLatest ? "bg-blue-500" : "bg-slate-300"}`} />
-
-                      {/* Content */}
-                      <div>
-                        <p className={`text-sm font-semibold ${isLatest ? "text-slate-900" : "text-slate-600"}`}>
+                      <div
+                        className={`absolute left-0 top-1.5 h-5 w-5 rounded-full border-4 border-white shadow-sm ring-1 ring-slate-200 ${
+                          isLatest ? "bg-blue-600" : "bg-slate-300"
+                        }`}
+                      />
+                      <div className="space-y-1.5">
+                        <p
+                          className={`text-sm font-semibold ${
+                            isLatest ? "text-slate-900" : "text-slate-600"
+                          }`}
+                        >
                           {REPORT_STATUS_LABELS[history.status as ReportStatus] || history.status}
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-xs text-slate-500">
                           {new Date(history.createdAt).toLocaleDateString("id-ID", {
                             day: "numeric",
                             month: "long",
@@ -268,14 +267,13 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ i
                           })}
                         </p>
                         {history.note && (
-                          <p className="text-sm text-slate-600 mt-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                          <p className="mt-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">
                             {history.note}
                           </p>
                         )}
-
                         {history.updatedBy && (
-                          <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                            <ShieldCheck className="w-3.5 h-3.5" />
+                          <div className="flex items-center gap-1.5 pt-1 text-xs text-slate-500">
+                            <ShieldCheck className="h-3.5 w-3.5" />
                             Diupdate oleh {history.updatedBy.name}
                           </div>
                         )}

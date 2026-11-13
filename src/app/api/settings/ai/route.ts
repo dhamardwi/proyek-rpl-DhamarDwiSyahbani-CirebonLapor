@@ -28,7 +28,7 @@ async function requireAdmin() {
 }
 
 const saveSchema = z.object({
-  provider: z.enum(["NVIDIA", "GEMINI"]),
+  provider: z.enum(["NVIDIA"]),
   apiKey: z.string().max(1000).optional().nullable(),
   clearApiKey: z.boolean().optional(),
   baseUrl: z.string().max(1000).optional().nullable(),
@@ -48,8 +48,6 @@ export async function GET() {
         providers,
         chatbotAvailable:
           providers.find((item) => item.provider === "NVIDIA")?.available ?? false,
-        duplicateAvailable:
-          providers.find((item) => item.provider === "GEMINI")?.available ?? false,
       },
     });
   } catch (error) {

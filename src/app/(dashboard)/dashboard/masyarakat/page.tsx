@@ -61,132 +61,110 @@ export default async function DashboardMasyarakatPage() {
   const completionRate = totalReports > 0 ? Math.round((selesai / totalReports) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Selamat datang, {firstName}!
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Pantau dan kelola laporan fasilitas umum Anda
-            </p>
-          </div>
-          <Link
-            href="/reports/create"
-            id="btn-buat-laporan"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Buat Laporan
-          </Link>
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Selamat datang, {firstName}
+          </h1>
+          <p className="text-sm text-slate-500 sm:text-base">
+            Pantau status dan perkembangan laporan fasilitas umum Anda.
+          </p>
         </div>
-
-        {/* Completion progress */}
-        <div className="mt-6">
-          <div className="flex justify-between mb-1">
-            <span className="text-xs font-medium text-slate-500">Tingkat Selesai</span>
-            <span className="text-xs font-semibold text-slate-900">{completionRate}%</span>
-          </div>
-          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-1000"
-              style={{ width: `${completionRate}%` }}
-            />
-          </div>
-        </div>
+        <Link
+          href="/reports/create"
+          id="btn-buat-laporan"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-medium text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700"
+        >
+          <PlusCircle className="h-4 w-4" />
+          Buat Laporan
+        </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <Card className="overflow-hidden">
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Tingkat penyelesaian laporan</p>
+              <p className="text-xs text-slate-500">Persentase laporan yang telah selesai ditangani</p>
+            </div>
+            <p className="text-2xl font-bold text-slate-900">{completionRate}%</p>
+          </div>
+          <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all" style={{ width: `${completionRate}%` }} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label} className="hover:shadow-xl transition-all border-0">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-lg ${stat.colorClass}`}>
-                    <Icon className={`w-5 h-5 ${stat.iconColor}`} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">
-                      {stat.label}
-                    </p>
-                  </div>
+            <Card key={stat.label} className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-5">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.colorClass}`}>
+                  <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                <div>
+                  <p className="text-2xl font-bold tracking-tight text-slate-900">{stat.value}</p>
+                  <p className="text-xs font-medium text-slate-500 sm:text-sm">{stat.label}</p>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Laporan Terbaru */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div>
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-              Laporan Terbaru
-            </CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-900">Laporan Terbaru</CardTitle>
+            <p className="mt-0.5 text-sm text-slate-500">Aktivitas pelaporan terkini Anda</p>
           </div>
-          <Link href="/my-reports" className="text-xs font-medium text-blue-600 hover:underline">
-            Lihat semua laporan
+          <Link href="/my-reports" className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+            Lihat semua
           </Link>
         </CardHeader>
-        <CardContent className="pb-6">
+        <CardContent className="p-0">
           {reports.length === 0 ? (
-            <div className="py-12 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full mb-4">
-                <FileText className="w-6 h-6 text-slate-400" />
+            <div className="px-6 py-14 text-center">
+              <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <FileText className="h-6 w-6" />
               </div>
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">
-                Belum ada laporan
-              </h3>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <h3 className="mt-4 text-sm font-semibold text-slate-900">Belum ada laporan</h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
                 Buat laporan pertama Anda untuk memantau status penanganan fasilitas umum.
               </p>
               <Link
                 href="/reports/create"
-                className="mt-4 inline-flex items-center gap-2 text-xs font-medium text-blue-600 hover:underline"
+                className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700"
               >
-                <PlusCircle className="w-3.5 h-3.5" />
-                Buat Laporan Sekarang
+                <PlusCircle className="h-4 w-4" />
+                Buat laporan sekarang
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100">
               {reports.map((r) => (
-                <div key={r.id} className="px-4 py-4 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-                          #{r.id.slice(-6).toUpperCase()}
-                        </span>
-                        <span className="text-slate-300 text-xs">•</span>
-                        <span className="text-xs font-medium text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded">
+                <Link key={r.id} href={`/my-reports/${r.id}`} className="block px-5 py-4 transition-colors hover:bg-slate-50/70 sm:px-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">#{r.id.slice(-6).toUpperCase()}</span>
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100">
                           {r.facilityType.name}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-slate-900 line-clamp-1">
-                        {r.title}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {new Date(r.createdAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                        })}
+                      <p className="truncate text-sm font-medium text-slate-900">{r.title}</p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(r.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${statusBadge[r.status] ?? "bg-slate-100 text-slate-600 border"}`}>
+                    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusBadge[r.status] ?? "border-slate-200 bg-slate-100 text-slate-600"}`}>
                       {REPORT_STATUS_LABELS[r.status as ReportStatus] ?? r.status}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

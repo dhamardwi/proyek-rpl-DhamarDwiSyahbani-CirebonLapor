@@ -105,94 +105,82 @@ export default function ChatbotWidget() {
 
   return (
     <>
-      {/* Tombol mengambang */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          aria-label="Buka chatbot asisten desa"
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 flex items-center justify-center transition-all hover:scale-105"
+          aria-label="Buka chatbot asisten"
+          className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-600/30 sm:bottom-6 sm:right-6"
         >
-          <MessageCircle className="w-6 h-6" />
+          <MessageCircle className="h-6 w-6" />
         </button>
       )}
 
-      {/* Panel chat */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-[calc(100vw-3rem)] max-w-sm h-[480px] max-h-[70vh] bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-3 bg-blue-600 text-white px-4 py-3">
-            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-              <Bot className="w-5 h-5" />
+        <div className="fixed bottom-4 right-4 z-50 flex h-[560px] max-h-[75vh] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-300/40 sm:bottom-6 sm:right-6">
+          <div className="flex items-center gap-3 border-b border-blue-500/20 bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3.5 text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
+              <Bot className="h-5 w-5" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">
-                Chatbot {roleLabel}
-              </p>
-              <p className="text-xs text-blue-100 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-                AI • NVIDIA NIM | {role}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">Asisten {roleLabel}</p>
+              <p className="flex items-center gap-1.5 text-xs text-blue-100">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                CirebonLapor AI • Siap membantu
               </p>
             </div>
             <button
               onClick={() => setOpen(false)}
               aria-label="Tutup chatbot"
-              className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/90 transition-colors hover:bg-white/15 hover:text-white"
             >
-              <X className="w-5 h-5" />
+              <X className="h-4.5 w-4.5" />
             </button>
           </div>
 
-          {/* Pesan */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-slate-50">
+          <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/70 px-4 py-4">
             {displayMessages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex gap-2 ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+              <div key={i} className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 {m.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="w-4 h-4 text-blue-600" />
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 ring-1 ring-blue-200/60">
+                    <Bot className="h-4 w-4" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                  className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                     m.role === "user"
-                      ? "bg-blue-600 text-white rounded-br-md"
-                      : "bg-white text-slate-800 border border-slate-200 rounded-bl-md shadow-sm"
+                      ? "rounded-br-md bg-blue-600 text-white shadow-sm shadow-blue-600/20"
+                      : "rounded-bl-md border border-slate-200/80 bg-white text-slate-700 shadow-sm"
                   }`}
                 >
                   {m.content}
                 </div>
                 {m.role === "user" && (
-                  <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <User className="w-4 h-4 text-slate-600" />
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                    <User className="h-4 w-4" />
                   </div>
                 )}
               </div>
             ))}
 
             {loading && (
-              <div className="flex gap-2 items-center text-slate-500 text-sm">
-                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
-                <span>Asisten sedang mengetikk…</span>
+                <span>Asisten sedang mengetik…</span>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
 
-          {/* Pertanyaan cepat (hanya sebelum percakapan dimulai) */}
           {!loading && displayQuestions.length > 0 && (
-            <div className="px-3 pt-2 pb-1 flex flex-wrap gap-1.5 bg-slate-50 border-t border-slate-100">
+            <div className="flex flex-wrap gap-1.5 border-t border-slate-100 bg-white px-3 py-2.5">
               {displayQuestions.map((q) => (
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}
                   disabled={loading}
-                  className="text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                  className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 disabled:opacity-50"
                 >
                   {q}
                 </button>
@@ -200,33 +188,28 @@ export default function ChatbotWidget() {
             </div>
           )}
 
-          {/* Input */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               sendMessage();
             }}
-            className="flex items-center gap-2 p-3 border-t border-slate-200 bg-white"
+            className="flex items-center gap-2 border-t border-slate-200 bg-white p-3"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Tulis pertanyaan…"
+              placeholder="Tulis pertanyaan Anda…"
               maxLength={1000}
               disabled={loading}
-              className="flex-1 text-sm border border-slate-300 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50"
+              className="h-10 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-900 placeholder:text-slate-400 transition-all focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
               aria-label="Kirim pesan"
-              className="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
         </div>

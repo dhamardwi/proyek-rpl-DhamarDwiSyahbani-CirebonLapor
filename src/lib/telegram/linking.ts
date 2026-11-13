@@ -38,11 +38,17 @@ export async function createLinkToken(userId: string): Promise<{
 }> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, isActive: true },
+    select: { id: true, isActive: true, role: true },
   });
 
   if (!user || !user.isActive) {
     throw new TelegramLinkError("USER_NOT_FOUND", "Akun tidak tersedia.");
+  }
+  if (user.role === "ADMIN" || user.role === "PETUGAS") {
+    throw new TelegramLinkError(
+      "USER_NOT_FOUND",
+      "Integrasi Telegram tidak tersedia untuk akun admin atau petugas."
+    );
   }
 
   const rawToken = randomBytes(32).toString("base64url");
@@ -115,6 +121,12 @@ export async function consumeLinkToken(input: {
     }
     if (!stored.user.isActive) {
       throw new TelegramLinkError("USER_NOT_FOUND", "Akun tidak aktif.");
+    }
+    if (stored.user.role === "ADMIN" || stored.user.role === "PETUGAS") {
+      throw new TelegramLinkError(
+        "USER_NOT_FOUND",
+        "Integrasi Telegram tidak tersedia untuk akun admin atau petugas."
+      );
     }
 
     const existingChat = await tx.telegramLink.findUnique({

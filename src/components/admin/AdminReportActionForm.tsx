@@ -121,13 +121,13 @@ export default function AdminReportActionForm({
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+    <Card className="rounded-2xl border-slate-200/80 shadow-sm">
+      <CardHeader className="border-b border-slate-100 pb-4">
+        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">
           Aksi Administrator
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-5 sm:p-6">
         {error && (
           <Alert variant="destructive">
             <XCircle className="w-4 h-4" />
@@ -170,7 +170,7 @@ export default function AdminReportActionForm({
 
         {/* Dynamic Forms based on selected action */}
         {action && (
-          <form onSubmit={handleSubmit} className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
             
             {(action === "VERIFY" || action === "REJECT") && (
               <div className="space-y-2">

@@ -1,10 +1,9 @@
 /**
  * Pipeline pasca-pengiriman laporan.
  *
- * Dijalankan lewat `after()` pada route POST /api/reports sehingga analisis
- * AI (Gemini) dan pemeriksaan duplikat tidak menahan response ke masyarakat.
- * Semua kegagalan bersifat fail-open: laporan tetap tersimpan dan masuk
- * antrean verifikasi manual.
+ * Dijalankan lewat `after()` pada route POST /api/reports sehingga pemrosesan
+ * pasca-laporan tidak menahan response ke masyarakat. Semua kegagalan bersifat
+ * fail-open: laporan tetap tersimpan dan masuk antrean verifikasi manual.
  */
 
 import db from "@/lib/db";
@@ -32,7 +31,7 @@ async function analyzeImageAndModerate(
   const aiService = getAIService();
   if (!(await aiService.isAvailable())) {
     console.log(
-      "[AI] Gemini belum dikonfigurasi. Laporan tetap menunggu verifikasi manual."
+      "[AI] Analisis foto AI tidak aktif. Laporan tetap menunggu verifikasi manual."
     );
     return "MANUAL_REVIEW";
   }
