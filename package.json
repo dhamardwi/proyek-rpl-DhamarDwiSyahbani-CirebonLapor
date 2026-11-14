@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cmd /c \"set NODE_OPTIONS=--dns-result-order=ipv6first --no-network-family-autoselection && next dev\"",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -11,9 +11,6 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
-    "telegram:webhook": "tsx scripts/telegram-set-webhook.ts",
-    "telegram:webhook:delete": "tsx scripts/telegram-set-webhook.ts --delete",
-    "telegram:check": "tsx scripts/telegram-check.ts",
     "test": "node scripts/run-tests.mjs"
   },
   "prisma": {

@@ -43,13 +43,13 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  reports            Report[]              @relation("Pelapor")
-  assignments        Report[]              @relation("PetugasDitugaskan")
-  statusUpdates      ReportStatusHistory[]
-  notifications      Notification[]
-  telegramLink       TelegramLink?
-  telegramLinkTokens TelegramLinkToken[]
-  duplicateReviews   ReportDuplicateAnalysis[] @relation("DuplicateReviewer")
+  reports               Report[]                  @relation("Pelapor")
+  assignments           Report[]                  @relation("PetugasDitugaskan")
+  statusUpdates         ReportStatusHistory[]
+  notifications         Notification[]
+  whatsappLink          WhatsappLink?
+  whatsappRegistrations WhatsappRegistration[]
+  duplicateReviews      ReportDuplicateAnalysis[] @relation("DuplicateReviewer")
 
   @@map("users")
 }
@@ -96,12 +96,12 @@ model Report {
   facilityTypeId String  @map("facility_type_id")
 
   // Relations
-  user          User                  @relation("Pelapor", fields: [userId], references: [id])
-  assignee      User?                 @relation("PetugasDitugaskan", fields: [assignedTo], references: [id])
-  facilityType  FacilityType          @relation(fields: [facilityTypeId], references: [id])
-  images        ReportImage[]
-  statusHistory ReportStatusHistory[]
-  duplicateAnalyses  ReportDuplicateAnalysis[] @relation("DuplicateReport")
+  user                User                      @relation("Pelapor", fields: [userId], references: [id])
+  assignee            User?                     @relation("PetugasDitugaskan", fields: [assignedTo], references: [id])
+  facilityType        FacilityType              @relation(fields: [facilityTypeId], references: [id])
+  images              ReportImage[]
+  statusHistory       ReportStatusHistory[]
+  duplicateAnalyses   ReportDuplicateAnalysis[] @relation("DuplicateReport")
   duplicateCandidates ReportDuplicateAnalysis[] @relation("DuplicateCandidate")
 
   @@index([status])
@@ -178,50 +178,83 @@ model Notification {
 }
 
 // ===========================================================
-// TELEGRAM LINK (satu akun aplikasi <-> satu chat Telegram)
+// WHATSAPP LINK (satu akun aplikasi <-> satu nomor WhatsApp aktif)
+// Hanya dibuat setelah OTP berhasil diverifikasi.
 // ===========================================================
 
-model TelegramLink {
+model WhatsappLink {
   id          String   @id @default(cuid())
-  // Chat ID hanya disimpan setelah diverifikasi lewat webhook.
-  chatId      String   @unique @map("chat_id")
-  username    String?  @map("telegram_username")
-  connectedAt DateTime @default(now()) @map("connected_at")
+  // Nomor ternormalisasi format internasional, mis. 6281234567890.
+  phoneNumber String   @unique @map("phone_number")
+  verifiedAt  DateTime @default(now()) @map("verified_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([connectedAt])
-  @@map("telegram_links")
+  @@index([createdAt])
+  @@map("whatsapp_links")
 }
 
 // ===========================================================
-// TELEGRAM LINK TOKEN (sekali pakai, kedaluwarsa, disimpan sebagai hash)
+// WHATSAPP REGISTRATION (pengajuan nomor + persetujuan admin)
+// Status persetujuan: PENDING | APPROVED | REJECTED
+// Status akhir:      VERIFIED | CANCELLED
+// Persetujuan admin TIDAK sama dengan status verifikasi OTP.
 // ===========================================================
 
-model TelegramLinkToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique @map("token_hash")
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+model WhatsappRegistration {
+  id              String    @id @default(cuid())
+  phoneNumber     String    @map("phone_number")
+  // PENDING | APPROVED | REJECTED | VERIFIED | CANCELLED
+  status          String    @default("PENDING")
+  rejectionReason String?   @map("rejection_reason")
+  reviewedBy      String?   @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+  otpSentAt       DateTime? @map("otp_sent_at")
+  otpSendError    String?   @map("otp_send_error")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String       @map("user_id")
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otp    WhatsappOtp?
 
-  @@index([userId])
+  @@index([status, createdAt])
+  @@index([userId, status])
+  @@map("whatsapp_registrations")
+}
+
+// ===========================================================
+// WHATSAPP OTP (sekali pakai, kedaluwarsa, disimpan sebagai hash)
+// Tabel ini tidak pernah menyimpan OTP mentah.
+// ===========================================================
+
+model WhatsappOtp {
+  id         String    @id @default(cuid())
+  otpHash    String    @map("otp_hash")
+  expiresAt  DateTime  @map("expires_at")
+  attempts   Int       @default(0)
+  usedAt     DateTime? @map("used_at")
+  lastSentAt DateTime? @map("last_sent_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  registrationId String               @unique @map("registration_id")
+  registration   WhatsappRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
   @@index([expiresAt])
-  @@map("telegram_link_tokens")
+  @@map("whatsapp_otps")
 }
 
 // ===========================================================
-// TELEGRAM OUTBOX (antrean pengiriman + retry + deduplikasi)
+// WHATSAPP OUTBOX (antrean pengiriman + retry + deduplikasi)
 // ===========================================================
 
-model TelegramOutbox {
+model WhatsappOutbox {
   id            String    @id @default(cuid())
   dedupeKey     String    @unique @map("dedupe_key")
-  chatId        String    @map("chat_id")
+  phoneNumber   String    @map("phone_number")
   message       String
   // PENDING | PROCESSING | SENT | FAILED
   status        String    @default("PENDING")
@@ -234,7 +267,7 @@ model TelegramOutbox {
 
   @@index([status, nextAttemptAt])
   @@index([userId])
-  @@map("telegram_outbox")
+  @@map("whatsapp_outbox")
 }
 
 // ===========================================================
@@ -259,25 +292,25 @@ model AppSetting {
 // ===========================================================
 
 model ReportDuplicateAnalysis {
-  id                String   @id @default(cuid())
-  reportId          String   @map("report_id")
-  candidateReportId String   @map("candidate_report_id")
-  similarityScore   Float    @default(0) @map("similarity_score")
-  descriptionScore  Float    @default(0) @map("description_score")
-  titleScore        Float    @default(0) @map("title_score")
-  categoryScore     Float    @default(0) @map("category_score")
-  locationScore     Float    @default(0) @map("location_score")
-  photoScore        Float?   @map("photo_score")
-  distanceMeters    Float?   @map("distance_meters")
-  isPotential       Boolean  @default(false) @map("is_potential")
-  aiStatus          String   @default("PENDING") @map("ai_status") // PENDING | DONE | FAILED
-  adminStatus       String   @default("PENDING") @map("admin_status") // PENDING | CONFIRMED | REJECTED
-  aiAnalysis        String?  @map("ai_analysis")
-  adminNote         String?  @map("admin_note")
-  reviewedBy        String?  @map("reviewed_by")
+  id                String    @id @default(cuid())
+  reportId          String    @map("report_id")
+  candidateReportId String    @map("candidate_report_id")
+  similarityScore   Float     @default(0) @map("similarity_score")
+  descriptionScore  Float     @default(0) @map("description_score")
+  titleScore        Float     @default(0) @map("title_score")
+  categoryScore     Float     @default(0) @map("category_score")
+  locationScore     Float     @default(0) @map("location_score")
+  photoScore        Float?    @map("photo_score")
+  distanceMeters    Float?    @map("distance_meters")
+  isPotential       Boolean   @default(false) @map("is_potential")
+  aiStatus          String    @default("PENDING") @map("ai_status") // PENDING | DONE | FAILED
+  adminStatus       String    @default("PENDING") @map("admin_status") // PENDING | CONFIRMED | REJECTED
+  aiAnalysis        String?   @map("ai_analysis")
+  adminNote         String?   @map("admin_note")
+  reviewedBy        String?   @map("reviewed_by")
   reviewedAt        DateTime? @map("reviewed_at")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   report    Report @relation("DuplicateReport", fields: [reportId], references: [id], onDelete: Cascade)
   candidate Report @relation("DuplicateCandidate", fields: [candidateReportId], references: [id], onDelete: Cascade)

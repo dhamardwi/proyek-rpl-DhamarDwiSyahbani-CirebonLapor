@@ -7,14 +7,14 @@ import {
   type Priority,
   type ReportStatus,
 } from "@/lib/constants";
-import { formatReportMessage } from "@/lib/telegram/messages";
+import { formatReportMessage } from "@/lib/whatsapp/messages";
 
 /**
  * Notification service untuk alur laporan.
  *
  * Modul ini menentukan PENERIMA berdasarkan role/penugasan dan menyusun isi
  * pesan. Pengiriman tetap melalui createNotification() sehingga kanal in-app
- * dan Telegram konsisten.
+ * dan WhatsApp konsisten.
  */
 
 export interface ReportCreatedNotificationInput {
@@ -52,7 +52,7 @@ export async function notifyReportCreated(
       message: `Laporan Anda berhasil dikirim dan sedang menunggu verifikasi.${autoSuffix}`,
       link: `/my-reports/${report.id}`,
       dedupeKey: `report-created:${report.id}`,
-      telegram: {
+      whatsapp: {
         text: formatReportMessage({
           heading: "🔔 Laporan Berhasil Dibuat",
           intro: "Halo, laporan Anda sudah kami terima.",
@@ -89,7 +89,7 @@ export async function notifyReportCreated(
             message: `Laporan baru dari ${reporterName}: "${report.title}".${autoDecision === "AUTO_ACCEPTED" ? " Sudah diverifikasi otomatis oleh AI." : ""}`,
             link: `/admin/reports/${report.id}`,
             dedupeKey: `report-created-admin:${report.id}`,
-            telegram: {
+            whatsapp: {
               text: formatReportMessage({
                 heading: "📥 Laporan Baru Masuk",
                 reportId: report.id,
@@ -116,7 +116,7 @@ export async function notifyReportCreated(
           message: `Laporan "${report.title}" telah terverifikasi (otomatis oleh AI) dan menunggu penugasan admin.`,
           link: "/tasks",
           dedupeKey: `report-autoaccepted-petugas:${report.id}`,
-          telegram: {
+          whatsapp: {
             text: formatReportMessage({
               heading: "📋 Laporan Terverifikasi",
               intro: "Laporan berikut sudah terverifikasi dan menunggu penugasan admin.",
@@ -176,7 +176,7 @@ export async function notifyAdminReportAction(
         message: "Laporan Anda telah diverifikasi dan diterima oleh Admin.",
         link: `/my-reports/${report.id}`,
         dedupeKey: `report-verified:${report.id}:${eventStamp}`,
-        telegram: {
+        whatsapp: {
           text: formatReportMessage({
             heading: "🔔 Laporan Diverifikasi",
             intro: "Halo, laporan Anda telah diverifikasi oleh admin.",
@@ -204,7 +204,7 @@ export async function notifyAdminReportAction(
             message: `Laporan "${report.title}" telah diverifikasi admin dan menunggu penugasan.`,
             link: "/tasks",
             dedupeKey: `report-verified-petugas:${report.id}:${eventStamp}`,
-            telegram: {
+            whatsapp: {
               text: formatReportMessage({
                 heading: "📋 Laporan Siap Ditugaskan",
                 intro: "Laporan berikut sudah diverifikasi admin dan menunggu penugasan.",
@@ -232,7 +232,7 @@ export async function notifyAdminReportAction(
         message: `Laporan Anda ditolak. Alasan: ${reason}`,
         link: `/my-reports/${report.id}`,
         dedupeKey: `report-rejected:${report.id}:${eventStamp}`,
-        telegram: {
+        whatsapp: {
           text: formatReportMessage({
             heading: "🔔 Laporan Ditolak",
             intro: "Halo, laporan Anda belum dapat kami terima.",
@@ -266,7 +266,7 @@ export async function notifyAdminReportAction(
         message: `Laporan Anda telah ditugaskan kepada petugas: ${officerName} dan akan segera ditangani.`,
         link: `/my-reports/${report.id}`,
         dedupeKey: `report-assigned-reporter:${report.id}:${eventStamp}`,
-        telegram: {
+        whatsapp: {
           text: formatReportMessage({
             heading: "🔔 Petugas Ditugaskan",
             intro: "Halo, laporan Anda sedang ditangani.",
@@ -287,7 +287,7 @@ export async function notifyAdminReportAction(
         message: `Anda mendapat tugas baru dari Admin untuk menangani laporan: ${report.title}`,
         link: `/tasks/${report.id}`,
         dedupeKey: `report-assigned-petugas:${report.id}:${eventStamp}`,
-        telegram: {
+        whatsapp: {
           text: formatReportMessage({
             heading: "📋 Penugasan Laporan Baru",
             reportId: report.id,
@@ -315,7 +315,7 @@ export async function notifyAdminReportAction(
         message: `Prioritas laporan "${report.title}" diubah menjadi ${priorityLabel}.`,
         link: `/tasks/${report.id}`,
         dedupeKey: `report-priority:${report.id}:${eventStamp}`,
-        telegram: {
+        whatsapp: {
           text: formatReportMessage({
             heading: "🔔 Prioritas Tugas Diperbarui",
             reportId: report.id,
@@ -370,7 +370,7 @@ export async function notifyTaskStatusChanged(
           : `Laporan "${report.title}" sedang dikerjakan oleh petugas.`,
       link: `/my-reports/${report.id}`,
       dedupeKey: `report-work-status:${report.id}:${newStatus}:${occurredAt.getTime()}`,
-      telegram: {
+      whatsapp: {
         text: formatReportMessage({
           heading:
             newStatus === "SELESAI"
@@ -412,7 +412,7 @@ export async function notifyTaskStatusChanged(
               message: `Laporan "${report.title}" telah diselesaikan oleh petugas ${actorName}.`,
               link: `/admin/reports/${report.id}`,
               dedupeKey: `report-completed-admin:${report.id}`,
-              telegram: {
+              whatsapp: {
                 text: formatReportMessage({
                   heading: "✅ Laporan Selesai Ditangani",
                   reportId: report.id,

@@ -21,7 +21,7 @@ function makeData(overrides: Partial<ChatbotDbData> = {}): ChatbotDbData {
       reportCount: 3,
       taskCount: 0,
       unreadNotifications: 2,
-      telegramConnected: true,
+      whatsappConnected: true,
     },
     admin: null,
     total: 10,
@@ -67,7 +67,7 @@ test("konteks memuat profil pengguna yang sedang login", () => {
   assert.match(context, /Nama: Siti Aminah/);
   assert.match(context, /Email: siti@example.com/);
   assert.match(context, /Peran: Masyarakat/);
-  assert.match(context, /Telegram: terhubung/);
+  assert.match(context, /WhatsApp: terhubung/);
   assert.match(context, /Jumlah laporan dibuat: 3/);
 });
 
@@ -83,7 +83,7 @@ test("jawaban personal menggunakan nama, email, dan peran pengguna", () => {
     /Masyarakat/
   );
   assert.match(
-    answerDataQuestion("Apakah Telegram saya terhubung?", data, "MASYARAKAT") ?? "",
+    answerDataQuestion("Apakah WhatsApp saya terhubung?", data, "MASYARAKAT") ?? "",
     /sudah terhubung/
   );
   assert.match(
@@ -141,7 +141,7 @@ test("petugas mendapat ringkasan tugas miliknya", () => {
       reportCount: 0,
       taskCount: 4,
       unreadNotifications: 1,
-      telegramConnected: false,
+      whatsappConnected: false,
     },
     tasks: [
       {
@@ -173,7 +173,7 @@ test("admin mendapat statistik pengguna dan verifikasi", () => {
       reportCount: 0,
       taskCount: 0,
       unreadNotifications: 0,
-      telegramConnected: false,
+      whatsappConnected: false,
     },
     admin: {
       totalUsers: 12,
@@ -286,7 +286,7 @@ test("petugas mendapat hitungan tugas yang spesifik", () => {
       reportCount: 0,
       taskCount: 4,
       unreadNotifications: 1,
-      telegramConnected: false,
+      whatsappConnected: false,
     },
     tasks: [
       {

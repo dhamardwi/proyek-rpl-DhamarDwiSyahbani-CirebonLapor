@@ -5,11 +5,10 @@ const root = process.cwd();
 const testFiles = [
   "tests/ai-config.test.ts",
   "tests/chatbot-context.test.ts",
-  "tests/telegram-format.test.ts",
-  "tests/telegram-linking.test.ts",
-  "tests/telegram-outbox.test.ts",
-  "tests/telegram-role-notifications.test.ts",
-  "tests/telegram-webhook.test.ts",
+  "tests/whatsapp-format.test.ts",
+  "tests/whatsapp-linking.test.ts",
+  "tests/whatsapp-outbox.test.ts",
+  "tests/whatsapp-role-notifications.test.ts",
 ];
 
 function run(args) {

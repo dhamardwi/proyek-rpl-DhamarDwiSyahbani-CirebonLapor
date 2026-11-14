@@ -52,8 +52,8 @@ export interface ChatbotProfile {
   reportCount: number;
   taskCount: number;
   unreadNotifications: number;
-  /** Hanya relevan untuk MASYARAKAT; integrasi Telegram tidak tersedia untuk ADMIN/PETUGAS. */
-  telegramConnected?: boolean;
+  /** Hanya relevan untuk MASYARAKAT; integrasi WhatsApp tidak tersedia untuk ADMIN/PETUGAS. */
+  whatsappConnected?: boolean;
 }
 
 export interface ChatbotAdminStats {
@@ -113,7 +113,7 @@ function safeText(value: unknown, max = 120): string {
 }
 
 export function wantsDbData(message: string): boolean {
-  return /lapor|status|berapa|statistik|data|tugas|kritis|berat|prioritas|progres|perkembangan|peta|fasilitas|punya|jumlah|total|rekap|notif|pemberitahuan|kategori|jenis|profil|nama|email|akun|pengguna|user|telegram/.test(
+  return /lapor|status|berapa|statistik|data|tugas|kritis|berat|prioritas|progres|perkembangan|peta|fasilitas|punya|jumlah|total|rekap|notif|pemberitahuan|kategori|jenis|profil|nama|email|akun|pengguna|user|whatsapp/.test(
     message.toLowerCase()
   );
 }
@@ -302,7 +302,7 @@ export async function getChatbotDbData(
           isActive: true,
           createdAt: true,
           ...(role === "MASYARAKAT"
-            ? { telegramLink: { select: { id: true } } }
+            ? { whatsappLink: { select: { id: true } } }
             : {}),
           _count: { select: { reports: true, assignments: true } },
         },
@@ -322,8 +322,8 @@ export async function getChatbotDbData(
           unreadNotifications,
           ...(role === "MASYARAKAT"
             ? {
-                telegramConnected: Boolean(
-                  (profileRow as { telegramLink?: { id: string } | null }).telegramLink
+                whatsappConnected: Boolean(
+                  (profileRow as { whatsappLink?: { id: string } | null }).whatsappLink
                 ),
               }
             : {}),
@@ -411,9 +411,9 @@ export function formatDbContext(data: ChatbotDbData, role: ChatbotRole): string 
 
   if (data.profile) {
     const p = data.profile;
-    const telegramInfo =
+    const whatsappInfo =
       p.role === "MASYARAKAT"
-        ? ` | Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}`
+        ? ` | WhatsApp: ${p.whatsappConnected ? "terhubung" : "belum terhubung"}`
         : "";
     lines.push(
       "[PROFIL PENGGUNA]",
@@ -424,7 +424,7 @@ export function formatDbContext(data: ChatbotDbData, role: ChatbotRole): string 
       `Bergabung sejak: ${p.joinedAt.toLocaleDateString("id-ID")}`,
       `Jumlah laporan dibuat: ${p.reportCount} | Tugas ditugaskan: ${p.taskCount}` +
         ` | Notifikasi belum dibaca: ${p.unreadNotifications}` +
-        telegramInfo +
+        whatsappInfo +
         "."
     );
   }
@@ -983,11 +983,11 @@ export function answerDataQuestion(
 
     if (
       p.role === "MASYARAKAT" &&
-      /(telegram|chat id).*(saya|akun|terhubung|konek)|apakah.*telegram|status telegram|hubungkan telegram/.test(q)
+      /(whatsapp|nomor wa).*(saya|akun|terhubung|konek)|apakah.*whatsapp|status whatsapp|hubungkan whatsapp/.test(q)
     ) {
-      return p.telegramConnected
-        ? "Akun Telegram Anda sudah terhubung."
-        : "Akun Telegram Anda belum terhubung.";
+      return p.whatsappConnected
+        ? "Nomor WhatsApp Anda sudah terhubung."
+        : "Nomor WhatsApp Anda belum terhubung.";
     }
 
     if (asksName || asksEmail) {
@@ -999,9 +999,9 @@ export function answerDataQuestion(
     }
 
     if (/profil|akun saya|data saya|identitas saya|status akun/.test(q)) {
-      const telegramLine =
+      const whatsappLine =
         p.role === "MASYARAKAT"
-          ? `\n- Telegram: ${p.telegramConnected ? "terhubung" : "belum terhubung"}`
+          ? `\n- WhatsApp: ${p.whatsappConnected ? "terhubung" : "belum terhubung"}`
           : "";
       return (
         `Profil akun Anda:\n` +
@@ -1012,7 +1012,7 @@ export function answerDataQuestion(
         `- Bergabung sejak: ${p.joinedAt.toLocaleDateString("id-ID")}\n` +
         `- Laporan dibuat: ${p.reportCount} | Tugas ditugaskan: ${p.taskCount}\n` +
         `- Notifikasi belum dibaca: ${p.unreadNotifications}` +
-        telegramLine
+        whatsappLine
       );
     }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
+import { maskWhatsappNumber } from "@/lib/whatsapp/config";
 import { z } from "zod";
 
 /**
@@ -30,12 +31,17 @@ export async function GET() {
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        telegramLink: {
+        whatsappLink: {
           select: {
-            chatId: true,
-            username: true,
-            connectedAt: true,
+            phoneNumber: true,
+            verifiedAt: true,
           },
+        },
+        whatsappRegistrations: {
+          where: { status: { in: ["PENDING", "APPROVED", "REJECTED"] } },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { status: true },
         },
         _count: {
           select: { reports: true, assignments: true },
@@ -62,11 +68,13 @@ export async function GET() {
         isActive: user.isActive,
         reportCount: user._count.reports,
         taskCount: user._count.assignments,
-        telegram: {
-          connected: !!user.telegramLink,
-          chatId: user.telegramLink?.chatId ?? null,
-          username: user.telegramLink?.username ?? null,
-          connectedAt: user.telegramLink?.connectedAt ?? null,
+        whatsapp: {
+          connected: !!user.whatsappLink,
+          maskedPhoneNumber: user.whatsappLink
+            ? maskWhatsappNumber(user.whatsappLink.phoneNumber)
+            : null,
+          verifiedAt: user.whatsappLink?.verifiedAt ?? null,
+          registrationStatus: user.whatsappRegistrations[0]?.status ?? null,
         },
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

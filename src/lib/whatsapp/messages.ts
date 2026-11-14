@@ -1,16 +1,12 @@
 import { getAppUrl } from "./config";
 
 /**
- * Telegram memakai parse mode HTML, sehingga semua nilai dinamis wajib
- * di-escape agar tidak merusak format atau menyisipkan markup.
+ * WhatsApp tidak memakai HTML. Tanda bintang dipakai untuk teks tebal.
+ * Nilai dinamis dibersihkan dari karakter kontrol agar pesan tetap rapi.
  */
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+
+export function sanitizeText(value: string): string {
+  return value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, " ").trim();
 }
 
 /**
@@ -54,7 +50,7 @@ function appendLink(lines: string[], linkPath?: string, linkLabel = "Buka detail
   const url = absoluteAppLink(linkPath);
   if (!url) return;
   lines.push("");
-  lines.push(`<a href="${escapeHtml(url)}">${escapeHtml(linkLabel)}</a>`);
+  lines.push(`${sanitizeText(linkLabel)}: ${url}`);
 }
 
 export interface ReportMessageInput {
@@ -74,30 +70,30 @@ export interface ReportMessageInput {
 }
 
 export function formatReportMessage(input: ReportMessageInput): string {
-  const lines: string[] = [`<b>${escapeHtml(input.heading)}</b>`, ""];
+  const lines: string[] = [`*${sanitizeText(input.heading)}*`, ""];
 
   if (input.intro) {
-    lines.push(escapeHtml(input.intro), "");
+    lines.push(sanitizeText(input.intro), "");
   }
 
-  lines.push(`Nomor Laporan: <code>${escapeHtml(reportReference(input.reportId))}</code>`);
-  lines.push(`Judul: ${escapeHtml(input.reportTitle)}`);
+  lines.push(`Nomor Laporan: ${reportReference(input.reportId)}`);
+  lines.push(`Judul: ${sanitizeText(input.reportTitle)}`);
 
-  if (input.status) lines.push(`Status: ${escapeHtml(input.status)}`);
-  if (input.address) lines.push(`Lokasi: ${escapeHtml(input.address)}`);
-  if (input.assignedTo) lines.push(`Petugas: ${escapeHtml(input.assignedTo)}`);
-  if (input.assignedBy) lines.push(`Ditugaskan oleh: ${escapeHtml(input.assignedBy)}`);
+  if (input.status) lines.push(`Status: ${sanitizeText(input.status)}`);
+  if (input.address) lines.push(`Lokasi: ${sanitizeText(input.address)}`);
+  if (input.assignedTo) lines.push(`Petugas: ${sanitizeText(input.assignedTo)}`);
+  if (input.assignedBy) lines.push(`Ditugaskan oleh: ${sanitizeText(input.assignedBy)}`);
 
   const time = formatDateTime(input.eventTime);
-  if (time) lines.push(`Waktu: ${escapeHtml(time)}`);
+  if (time) lines.push(`Waktu: ${time}`);
 
   if (input.note) {
     lines.push("");
-    lines.push(`Catatan: ${escapeHtml(input.note)}`);
+    lines.push(`Catatan: ${sanitizeText(input.note)}`);
   }
 
   if (input.footer) {
-    lines.push("", escapeHtml(input.footer));
+    lines.push("", sanitizeText(input.footer));
   }
 
   appendLink(lines, input.linkPath, input.linkLabel);
@@ -110,7 +106,19 @@ export function formatGenericMessage(params: {
   linkPath?: string;
   linkLabel?: string;
 }): string {
-  const lines = [`🔔 <b>${escapeHtml(params.title)}</b>`, "", escapeHtml(params.message)];
+  const lines = [`🔔 *${sanitizeText(params.title)}*`, "", sanitizeText(params.message)];
   appendLink(lines, params.linkPath, params.linkLabel);
   return lines.join("\n");
+}
+
+/** Pesan OTP singkat. Tidak pernah disimpan ke outbox atau log. */
+export function formatOtpMessage(otp: string, ttlMinutes: number): string {
+  return [
+    "*CirebonLapor - Verifikasi WhatsApp*",
+    "",
+    `Kode OTP Anda: *${otp}*`,
+    "",
+    `Kode berlaku ${ttlMinutes} menit dan hanya dapat digunakan satu kali.`,
+    "Jangan bagikan kode ini kepada siapa pun.",
+  ].join("\n");
 }

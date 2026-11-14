@@ -86,9 +86,9 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
               ) : session ? (
                 <>
                   <Link
-                    href="/settings/telegram"
+                    href={session.user?.role === "ADMIN" ? "/admin/whatsapp" : "/settings/whatsapp"}
                     className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Pengaturan Telegram"
+                    title="Pengaturan WhatsApp"
                   >
                     <Settings className="w-5 h-5" />
                   </Link>
@@ -124,11 +124,15 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
                           Manajemen Profil
                         </Link>
                         <Link
-                          href="/settings/telegram"
+                          href={
+                            session.user?.role === "ADMIN"
+                              ? "/admin/whatsapp"
+                              : "/settings/whatsapp"
+                          }
                           className="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                         >
                           <Settings className="w-4 h-4 text-slate-500" />
-                          Pengaturan Telegram
+                          Pengaturan WhatsApp
                         </Link>
                         <hr className="my-1 border-slate-100" />
                         <button

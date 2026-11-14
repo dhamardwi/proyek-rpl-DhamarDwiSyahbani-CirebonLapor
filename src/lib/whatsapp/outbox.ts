@@ -1,9 +1,9 @@
 import { after } from "next/server";
 import db from "@/lib/db";
-import { sendTelegramMessage } from "./bot-service";
-import { isTelegramConfigured } from "./config";
+import { sendWhatsappMessage } from "./fonnte-service";
+import { isFonnteConfigured } from "./config";
 
-export const TELEGRAM_MAX_ATTEMPTS = 3;
+export const WHATSAPP_MAX_ATTEMPTS = 3;
 const CLAIM_LEASE_MS = 5 * 60 * 1000;
 const RETRY_DELAYS_MS = [30_000, 2 * 60_000, 5 * 60_000];
 
@@ -25,60 +25,60 @@ function retryDelay(attempt: number): number {
  * request utama, tahan terhadap kegagalan sementara, dan idempoten lewat
  * dedupeKey unik.
  */
-export async function enqueueTelegramMessage(input: {
+export async function enqueueWhatsappMessage(input: {
   userId?: string | null;
-  chatId: string;
+  phoneNumber: string;
   text: string;
   dedupeKey: string;
 }): Promise<boolean> {
-  if (!isTelegramConfigured()) return false;
+  if (!isFonnteConfigured()) return false;
 
   try {
-    await db.telegramOutbox.create({
+    await db.whatsappOutbox.create({
       data: {
         userId: input.userId ?? null,
-        chatId: input.chatId,
+        phoneNumber: input.phoneNumber,
         message: input.text,
         dedupeKey: input.dedupeKey,
-        // Gunakan jam proses ini agar konsisten dengan perbandingan due-time
-        // di worker. Default `now()` SQLite dapat berbeda beberapa milidetik
-        // dari `Date` Node dan membuat pesan baru sesekali terlihat belum due.
         nextAttemptAt: new Date(),
       },
     });
     return true;
   } catch (error) {
     if (isUniqueConstraintError(error)) return false;
-    console.error("[TELEGRAM_OUTBOX_ENQUEUE_ERROR]", error instanceof Error ? error.message : "unknown");
+    console.error(
+      "[WHATSAPP_OUTBOX_ENQUEUE_ERROR]",
+      error instanceof Error ? error.message : "unknown"
+    );
     return false;
   }
 }
 
 /**
- * Mengantrekan pesan hanya jika pengguna sudah menautkan Telegram.
+ * Mengantrekan pesan hanya jika pengguna memiliki nomor WhatsApp aktif.
  * dedupeKey di-scope per pengguna agar event yang sama untuk beberapa
  * penerima tidak saling menimpa.
  *
- * Notifikasi Telegram tidak didukung untuk role ADMIN dan PETUGAS.
+ * Notifikasi WhatsApp tidak didukung untuk role ADMIN dan PETUGAS.
  */
-export async function enqueueTelegramForUser(params: {
+export async function enqueueWhatsappForUser(params: {
   userId: string;
   text: string;
   dedupeKey: string;
 }): Promise<boolean> {
-  if (!isTelegramConfigured()) return false;
+  if (!isFonnteConfigured()) return false;
 
-  const link = await db.telegramLink.findUnique({
+  const link = await db.whatsappLink.findUnique({
     where: { userId: params.userId },
-    select: { chatId: true, user: { select: { role: true } } },
+    select: { phoneNumber: true, user: { select: { role: true, isActive: true } } },
   });
 
   if (!link) return false;
-  if (link.user.role === "ADMIN" || link.user.role === "PETUGAS") return false;
+  if (link.user.role !== "MASYARAKAT" || !link.user.isActive) return false;
 
-  return enqueueTelegramMessage({
+  return enqueueWhatsappMessage({
     userId: params.userId,
-    chatId: link.chatId,
+    phoneNumber: link.phoneNumber,
     text: params.text,
     dedupeKey: `${params.dedupeKey}:${params.userId}`,
   });
@@ -87,17 +87,17 @@ export async function enqueueTelegramForUser(params: {
 /**
  * Menjadwalkan pemrosesan setelah response selesai. Jika `after` tidak
  * tersedia (mis. dipanggil dari skrip), fallback ke fire-and-forget.
- * Set TELEGRAM_AUTO_PROCESS=false untuk mematikan otomatisasi (dipakai tes).
+ * Set WHATSAPP_AUTO_PROCESS=false untuk mematikan otomatisasi (dipakai tes).
  */
-export function scheduleTelegramOutboxProcessing(): void {
-  if (process.env.TELEGRAM_AUTO_PROCESS === "false") return;
+export function scheduleWhatsappOutboxProcessing(): void {
+  if (process.env.WHATSAPP_AUTO_PROCESS === "false") return;
 
   try {
     after(async () => {
-      await processTelegramOutbox();
+      await processWhatsappOutbox();
     });
   } catch {
-    void processTelegramOutbox().catch(() => {
+    void processWhatsappOutbox().catch(() => {
       // Kegagalan outbox tidak boleh memengaruhi request utama.
     });
   }
@@ -107,7 +107,7 @@ export function scheduleTelegramOutboxProcessing(): void {
  * Mengirim pesan PENDING yang sudah jatuh tempo. Klaim dilakukan atomik
  * sehingga beberapa worker tidak mengirim pesan yang sama dua kali.
  */
-export async function processTelegramOutbox(options?: { max?: number }): Promise<{
+export async function processWhatsappOutbox(options?: { max?: number }): Promise<{
   sent: number;
   failed: number;
   retried: number;
@@ -116,16 +116,16 @@ export async function processTelegramOutbox(options?: { max?: number }): Promise
   const now = new Date();
 
   // Pulihkan klaim yang macet (worker mati di tengah pengiriman).
-  await db.telegramOutbox.updateMany({
+  await db.whatsappOutbox.updateMany({
     where: { status: "PROCESSING", nextAttemptAt: { lt: now } },
     data: { status: "PENDING" },
   });
 
-  const candidates = await db.telegramOutbox.findMany({
+  const candidates = await db.whatsappOutbox.findMany({
     where: {
       status: "PENDING",
       nextAttemptAt: { lte: now },
-      attempts: { lt: TELEGRAM_MAX_ATTEMPTS },
+      attempts: { lt: WHATSAPP_MAX_ATTEMPTS },
     },
     orderBy: { createdAt: "asc" },
     take: max,
@@ -137,7 +137,7 @@ export async function processTelegramOutbox(options?: { max?: number }): Promise
   let retried = 0;
 
   for (const candidate of candidates) {
-    const claimed = await db.telegramOutbox.updateMany({
+    const claimed = await db.whatsappOutbox.updateMany({
       where: { id: candidate.id, status: "PENDING" },
       data: {
         status: "PROCESSING",
@@ -147,29 +147,30 @@ export async function processTelegramOutbox(options?: { max?: number }): Promise
 
     if (claimed.count !== 1) continue;
 
-    const item = await db.telegramOutbox.findUnique({ where: { id: candidate.id } });
+    const item = await db.whatsappOutbox.findUnique({ where: { id: candidate.id } });
     if (!item) continue;
 
-    // Hormati pemutusan koneksi: jangan kirim ke chat yang sudah dilepas.
+    // Hormati pemutusan/penggantian nomor: jangan kirim ke nomor yang tidak
+    // lagi aktif untuk pengguna tersebut.
     if (item.userId) {
-      const stillLinked = await db.telegramLink.findFirst({
-        where: { userId: item.userId, chatId: item.chatId },
+      const stillLinked = await db.whatsappLink.findFirst({
+        where: { userId: item.userId, phoneNumber: item.phoneNumber },
         select: { id: true },
       });
       if (!stillLinked) {
-        await db.telegramOutbox.update({
+        await db.whatsappOutbox.update({
           where: { id: item.id },
-          data: { status: "FAILED", lastError: "telegram_disconnected" },
+          data: { status: "FAILED", lastError: "whatsapp_disconnected" },
         });
         failed += 1;
         continue;
       }
     }
 
-    const result = await sendTelegramMessage(item.chatId, item.message);
+    const result = await sendWhatsappMessage(item.phoneNumber, item.message);
 
     if (result.ok) {
-      await db.telegramOutbox.update({
+      await db.whatsappOutbox.update({
         where: { id: item.id },
         data: {
           status: "SENT",
@@ -182,9 +183,9 @@ export async function processTelegramOutbox(options?: { max?: number }): Promise
     }
 
     const attempts = item.attempts + 1;
-    const terminal = !result.retryable || attempts >= TELEGRAM_MAX_ATTEMPTS;
+    const terminal = !result.retryable || attempts >= WHATSAPP_MAX_ATTEMPTS;
 
-    await db.telegramOutbox.update({
+    await db.whatsappOutbox.update({
       where: { id: item.id },
       data: {
         status: terminal ? "FAILED" : "PENDING",

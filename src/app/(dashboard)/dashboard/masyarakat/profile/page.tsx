@@ -2,11 +2,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import db from "@/lib/db";
+import { maskWhatsappNumber } from "@/lib/whatsapp/config";
 import ProfileClient from "./ProfileClient";
 
 export const metadata = {
   title: "Manajemen Profil – CirebonLapor",
-  description: "Kelola informasi profil dan integrasi Telegram Anda",
+  description: "Kelola informasi profil dan integrasi WhatsApp Anda",
 };
 
 export default async function ProfilePage() {
@@ -31,12 +32,17 @@ export default async function ProfilePage() {
       _count: {
         select: { reports: true },
       },
-      telegramLink: {
+      whatsappLink: {
         select: {
-          chatId: true,
-          username: true,
-          connectedAt: true,
+          phoneNumber: true,
+          verifiedAt: true,
         },
+      },
+      whatsappRegistrations: {
+        where: { status: { in: ["PENDING", "APPROVED", "REJECTED"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { status: true },
       },
     },
   });
@@ -59,11 +65,13 @@ export default async function ProfilePage() {
         taskCount: 0,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
-        telegram: {
-          connected: !!user.telegramLink,
-          chatId: user.telegramLink?.chatId ?? null,
-          username: user.telegramLink?.username ?? null,
-          connectedAt: user.telegramLink?.connectedAt?.toISOString() ?? null,
+        whatsapp: {
+          connected: !!user.whatsappLink,
+          maskedPhoneNumber: user.whatsappLink
+            ? maskWhatsappNumber(user.whatsappLink.phoneNumber)
+            : null,
+          verifiedAt: user.whatsappLink?.verifiedAt?.toISOString() ?? null,
+          registrationStatus: user.whatsappRegistrations[0]?.status ?? null,
         },
       }}
     />

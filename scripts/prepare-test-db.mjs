@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const dbBase = path.join(root, "prisma", "test-telegram.db");
+const dbBase = path.join(root, "prisma", "test-whatsapp.db");
 
 for (const suffix of ["", "-journal", "-wal", "-shm"]) {
   rmSync(`${dbBase}${suffix}`, { force: true });
@@ -19,7 +19,7 @@ const result = spawnSync(
     stdio: "inherit",
     env: {
       ...process.env,
-      DATABASE_URL: "file:./test-telegram.db",
+      DATABASE_URL: "file:./test-whatsapp.db",
     },
   }
 );

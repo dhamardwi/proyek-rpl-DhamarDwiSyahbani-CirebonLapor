@@ -19,11 +19,11 @@ interface ProfileData {
   taskCount: number;
   createdAt: string;
   updatedAt: string;
-  telegram: {
+  whatsapp: {
     connected: boolean;
-    chatId: string | null;
-    username: string | null;
-    connectedAt: string | null;
+    maskedPhoneNumber: string | null;
+    verifiedAt: string | null;
+    registrationStatus: string | null;
   };
 }
 

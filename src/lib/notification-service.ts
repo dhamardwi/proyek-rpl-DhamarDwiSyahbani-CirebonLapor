@@ -1,10 +1,10 @@
 ﻿import { randomUUID } from "crypto";
 import db from "./db";
-import { formatGenericMessage } from "./telegram/messages";
+import { formatGenericMessage } from "./whatsapp/messages";
 import {
-  enqueueTelegramForUser,
-  scheduleTelegramOutboxProcessing,
-} from "./telegram/outbox";
+  enqueueWhatsappForUser,
+  scheduleWhatsappOutboxProcessing,
+} from "./whatsapp/outbox";
 
 export interface CreateNotificationInput {
   userId: string;
@@ -17,10 +17,11 @@ export interface CreateNotificationInput {
    */
   dedupeKey?: string;
   /**
-   * Teks Telegram (HTML). Jika dihilangkan, notifikasi in-app dipakai sebagai
-   * fallback. Set `false` untuk event yang tidak perlu dikirim ke Telegram.
+   * Teks WhatsApp (plain text). Jika dihilangkan, notifikasi in-app dipakai
+   * sebagai fallback. Set `false` untuk event yang tidak perlu dikirim ke
+   * WhatsApp.
    */
-  telegram?: { text: string } | false;
+  whatsapp?: { text: string } | false;
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -34,9 +35,9 @@ function isUniqueConstraintError(error: unknown): boolean {
 
 /**
  * Menyimpan notifikasi in-app (perilaku lama) dan, bila pengguna sudah
- * menautkan Telegram, mengantrekannya ke outbox Telegram.
+ * memverifikasi nomor WhatsApp, mengantrekannya ke outbox WhatsApp.
  *
- * Semua kegagalan kanal Telegram bersifat fail-open: transaksi bisnis utama
+ * Semua kegagalan kanal WhatsApp bersifat fail-open: transaksi bisnis utama
  * tidak pernah dibatalkan oleh notifikasi.
  */
 export async function createNotification({
@@ -45,7 +46,7 @@ export async function createNotification({
   message,
   link,
   dedupeKey,
-  telegram,
+  whatsapp,
 }: CreateNotificationInput): Promise<void> {
   const eventKey = dedupeKey ? `${dedupeKey}:${userId}` : null;
 
@@ -70,26 +71,26 @@ export async function createNotification({
     return;
   }
 
-  if (telegram === false) return;
+  if (whatsapp === false) return;
 
   try {
     const text =
-      telegram?.text ??
+      whatsapp?.text ??
       formatGenericMessage({ title, message, linkPath: link });
 
     if (!text.trim()) return;
 
-    const enqueued = await enqueueTelegramForUser({
+    const enqueued = await enqueueWhatsappForUser({
       userId,
       text,
       dedupeKey: eventKey ?? `notification:${randomUUID()}`,
     });
 
-    if (enqueued) scheduleTelegramOutboxProcessing();
+    if (enqueued) scheduleWhatsappOutboxProcessing();
   } catch (error) {
-    // Jangan log payload pesan atau chat ID.
+    // Jangan log payload pesan atau nomor telepon.
     console.error(
-      "[TELEGRAM_NOTIFICATION_ENQUEUE_ERROR]",
+      "[WHATSAPP_NOTIFICATION_ENQUEUE_ERROR]",
       error instanceof Error ? error.message : "unknown"
     );
   }

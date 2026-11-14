@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
+import { maskWhatsappNumber } from "@/lib/whatsapp/config";
 
 /**
  * GET /api/users
@@ -60,10 +61,10 @@ export async function GET(req: NextRequest) {
           _count: {
             select: { reports: true, assignments: true },
           },
-          telegramLink: {
+          whatsappLink: {
             select: {
-              chatId: true,
-              connectedAt: true,
+              phoneNumber: true,
+              verifiedAt: true,
             },
           },
         },
@@ -87,8 +88,10 @@ export async function GET(req: NextRequest) {
           address: u.address ?? "",
           reportCount: u._count.reports,
           taskCount: u._count.assignments,
-          telegramConnected: !!u.telegramLink,
-          telegramChatId: u.telegramLink?.chatId ?? null,
+          whatsappConnected: !!u.whatsappLink,
+          whatsappPhoneNumber: u.whatsappLink
+            ? maskWhatsappNumber(u.whatsappLink.phoneNumber)
+            : null,
           createdAt: u.createdAt,
           updatedAt: u.updatedAt,
         })),

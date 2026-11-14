@@ -9,20 +9,17 @@ import {
 } from "@/lib/report-notification-service";
 import { createTestUser, resetDatabase } from "./helpers";
 
-let chatCounter = 100000;
+let phoneCounter = 100000;
 
 async function createLinkedUser(role: string, name: string, isActive = true) {
   const user = await createTestUser(role, name);
   if (!isActive) {
     await db.user.update({ where: { id: user.id }, data: { isActive: false } });
   }
-  // Telegram hanya didukung untuk role MASYARAKAT.
-  if (role === "MASYARAKAT") {
-    chatCounter += 1;
-    await db.telegramLink.create({
-      data: { userId: user.id, chatId: String(chatCounter) },
-    });
-  }
+  phoneCounter += 1;
+  await db.whatsappLink.create({
+    data: { userId: user.id, phoneNumber: `62${phoneCounter}0000000` },
+  });
   return user;
 }
 
@@ -31,7 +28,7 @@ async function notificationCount(userId: string) {
 }
 
 async function outboxCount(userId: string) {
-  return db.telegramOutbox.count({ where: { userId } });
+  return db.whatsappOutbox.count({ where: { userId } });
 }
 
 beforeEach(async () => {
@@ -42,7 +39,7 @@ after(async () => {
   await db.$disconnect();
 });
 
-test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin & petugas tidak menerima Telegram)", async () => {
+test("laporan baru AUTO_ACCEPTED: WhatsApp hanya untuk pelapor (admin & petugas tidak menerima WhatsApp)", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const admin = await createLinkedUser("ADMIN", "Admin Aktif");
   const inactiveAdmin = await createLinkedUser("ADMIN", "Admin Nonaktif", false);
@@ -63,7 +60,7 @@ test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin
 
   await notifyReportCreated(input);
 
-  // In-app notifications tetap dibuat sesuai logika bisnis
+  // In-app notifications tetap dibuat sesuai logika bisnis.
   assert.equal(await notificationCount(reporter.id), 1);
   assert.equal(await notificationCount(admin.id), 1);
   assert.equal(await notificationCount(inactiveAdmin.id), 0);
@@ -71,7 +68,7 @@ test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin
   assert.equal(await notificationCount(inactivePetugas.id), 0);
   assert.equal(await notificationCount(otherCitizen.id), 0);
 
-  // Telegram hanya untuk masyarakat (pelapor)
+  // WhatsApp hanya untuk masyarakat (pelapor).
   assert.equal(await outboxCount(reporter.id), 1);
   assert.equal(await outboxCount(admin.id), 0);
   assert.equal(await outboxCount(inactiveAdmin.id), 0);
@@ -79,7 +76,7 @@ test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin
   assert.equal(await outboxCount(inactivePetugas.id), 0);
   assert.equal(await outboxCount(otherCitizen.id), 0);
 
-  const reporterOutbox = await db.telegramOutbox.findFirst({
+  const reporterOutbox = await db.whatsappOutbox.findFirst({
     where: { userId: reporter.id },
   });
   assert.match(reporterOutbox?.message ?? "", /Laporan Berhasil Dibuat/);
@@ -91,7 +88,7 @@ test("laporan baru AUTO_ACCEPTED: notifikasi Telegram hanya untuk pelapor (admin
   assert.equal(await outboxCount(reporter.id), 1);
 });
 
-test("laporan baru yang menunggu verifikasi manual: petugas tidak menerima in-app/Telegram", async () => {
+test("laporan baru yang menunggu verifikasi manual: petugas tidak menerima in-app/WhatsApp", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const admin = await createLinkedUser("ADMIN", "Admin");
   const petugas = await createLinkedUser("PETUGAS", "Petugas");
@@ -115,7 +112,7 @@ test("laporan baru yang menunggu verifikasi manual: petugas tidak menerima in-ap
   assert.equal(await outboxCount(petugas.id), 0);
 });
 
-test("verifikasi admin: in-app ke pelapor & petugas aktif, Telegram hanya ke pelapor", async () => {
+test("verifikasi admin: in-app ke pelapor & petugas aktif, WhatsApp hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin Pemeriksa");
   const petugasA = await createLinkedUser("PETUGAS", "Petugas A");
@@ -154,7 +151,7 @@ test("verifikasi admin: in-app ke pelapor & petugas aktif, Telegram hanya ke pel
   assert.equal(await notificationCount(reporter.id), 1);
 });
 
-test("penolakan admin: notifikasi in-app & Telegram hanya ke pelapor", async () => {
+test("penolakan admin: notifikasi in-app & WhatsApp hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const petugas = await createLinkedUser("PETUGAS", "Petugas");
@@ -180,11 +177,11 @@ test("penolakan admin: notifikasi in-app & Telegram hanya ke pelapor", async () 
   assert.equal(await outboxCount(reporter.id), 1);
   assert.equal(await outboxCount(petugas.id), 0);
 
-  const outbox = await db.telegramOutbox.findFirst({ where: { userId: reporter.id } });
+  const outbox = await db.whatsappOutbox.findFirst({ where: { userId: reporter.id } });
   assert.match(outbox?.message ?? "", /Foto terlalu buram\./);
 });
 
-test("penugasan: in-app ke pelapor & petugas ditugaskan, Telegram hanya ke pelapor", async () => {
+test("penugasan: in-app ke pelapor & petugas ditugaskan, WhatsApp hanya ke pelapor", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const assignee = await createLinkedUser("PETUGAS", "Petugas Terpilih");
@@ -213,7 +210,7 @@ test("penugasan: in-app ke pelapor & petugas ditugaskan, Telegram hanya ke pelap
   assert.equal(await outboxCount(assignee.id), 0);
 });
 
-test("perubahan prioritas: in-app ke petugas bertanggung jawab, tanpa Telegram ke petugas", async () => {
+test("perubahan prioritas: in-app ke petugas bertanggung jawab, tanpa WhatsApp ke petugas", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("ADMIN", "Admin");
   const assignee = await createLinkedUser("PETUGAS", "Petugas");
@@ -241,7 +238,7 @@ test("perubahan prioritas: in-app ke petugas bertanggung jawab, tanpa Telegram k
   assert.equal(await outboxCount(assignee.id), 0);
 });
 
-test("status pengerjaan: Telegram hanya ke pelapor, admin aktif hanya in-app saat selesai", async () => {
+test("status pengerjaan: WhatsApp hanya ke pelapor, admin aktif hanya in-app saat selesai", async () => {
   const reporter = await createLinkedUser("MASYARAKAT", "Pelapor");
   const actor = await createLinkedUser("PETUGAS", "Petugas Pelaksana");
   const admin = await createLinkedUser("ADMIN", "Admin Aktif");

@@ -1,9 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Integrasi Telegram
+## Integrasi WhatsApp (Fonnte)
 
-Panduan konfigurasi bot, webhook, pengaturan pengguna, retry, dan pengujian ada di
-[`docs/telegram-notifications.md`](docs/telegram-notifications.md).
+Panduan konfigurasi Fonnte, alur persetujuan nomor, verifikasi OTP, retry, dan
+pengujian ada di [`docs/whatsapp-notifications.md`](docs/whatsapp-notifications.md).
 
 ## Getting Started
 

@@ -76,9 +76,9 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
               <>
                 {role === "MASYARAKAT" && (
                   <Link
-                    href="/settings/telegram"
+                    href="/settings/whatsapp"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                    title="Pengaturan Telegram"
+                    title="Pengaturan WhatsApp"
                   >
                     <Settings className="h-4.5 w-4.5" />
                   </Link>
@@ -116,11 +116,11 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
                         Profil Saya
                       </Link>
                       <Link
-                        href="/settings/telegram"
+                        href={role === "ADMIN" ? "/admin/whatsapp" : "/settings/whatsapp"}
                         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                       >
                         <Settings className="h-4 w-4 text-slate-400" />
-                        Pengaturan
+                        Pengaturan WhatsApp
                       </Link>
                       <div className="my-1 h-px bg-slate-100" />
                       <button

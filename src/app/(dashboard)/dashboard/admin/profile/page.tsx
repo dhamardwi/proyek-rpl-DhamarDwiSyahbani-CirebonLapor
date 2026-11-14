@@ -52,11 +52,11 @@ export default async function ProfilePage() {
         taskCount: 0,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
-        telegram: {
+        whatsapp: {
           connected: false,
-          chatId: null,
-          username: null,
-          connectedAt: null,
+          maskedPhoneNumber: null,
+          verifiedAt: null,
+          registrationStatus: null,
         },
       }}
     />

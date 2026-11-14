@@ -16,6 +16,7 @@ import {
   Wrench,
   Bot,
   ClipboardList,
+  MessageCircle,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/masyarakat", label: "Dashboard", icon: LayoutDashboard, roles: ["MASYARAKAT"] },
   { href: "/admin/reports", label: "Manajemen Laporan", icon: FileText, roles: ["ADMIN"] },
   { href: "/admin/users", label: "Manajemen Pengguna", icon: Users, roles: ["ADMIN"] },
+  { href: "/admin/whatsapp", label: "Persetujuan WhatsApp", icon: MessageCircle, roles: ["ADMIN"] },
   { href: "/admin/settings/ai", label: "Konfigurasi AI", icon: Bot, roles: ["ADMIN"] },
   { href: "/tasks", label: "Daftar Tugas", icon: Wrench, roles: ["PETUGAS"] },
   { href: "/my-reports", label: "Laporan Saya", icon: ClipboardList, roles: ["MASYARAKAT"] },
@@ -85,9 +87,12 @@ export default function Sidebar({
         },
       ];
       if (role === "MASYARAKAT") {
-        items.unshift({ href: "/settings/telegram", label: "Pengaturan Telegram", icon: Settings, roles: ["MASYARAKAT"] });
-      } else {
-        items.push({ href: "/settings/telegram", label: "Pengaturan Telegram", icon: Settings, roles: ["ADMIN", "PETUGAS"] });
+        items.unshift({
+          href: "/settings/whatsapp",
+          label: "Pengaturan WhatsApp",
+          icon: Settings,
+          roles: ["MASYARAKAT"],
+        });
       }
       return items;
     },

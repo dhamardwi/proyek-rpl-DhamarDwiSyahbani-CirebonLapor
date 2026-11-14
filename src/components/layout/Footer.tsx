@@ -13,7 +13,7 @@ export default function DashboardFooter() {
         <p className="text-center sm:text-left">© {new Date().getFullYear()} Sistem Pelaporan Fasilitas Umum Berbasis AI.</p>
         <div className="flex items-center justify-center gap-4">
           <Link href="/map" className="transition-colors hover:text-blue-600">Peta Sebaran</Link>
-          <Link href="/settings/telegram" className="transition-colors hover:text-blue-600">Pengaturan</Link>
+          <Link href="/settings/whatsapp" className="transition-colors hover:text-blue-600">Pengaturan</Link>
         </div>
       </div>
     </footer>

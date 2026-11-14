@@ -25,6 +25,7 @@ export default function Navbar() {
 
   const role = session?.user?.role?.toLowerCase();
   const dashboardHref = role ? `/dashboard/${role}` : "/dashboard";
+  const settingsHref = role === "admin" ? "/admin/whatsapp" : "/settings/whatsapp";
 
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
@@ -83,8 +84,8 @@ export default function Navbar() {
                       <Link href={`/dashboard/${role}/profile`} onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                         <UserIcon className="h-4 w-4 text-slate-400" /> Profil
                       </Link>
-                      <Link href="/settings/telegram" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                        <Settings className="h-4 w-4 text-slate-400" /> Pengaturan
+                      <Link href={settingsHref} onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                        <Settings className="h-4 w-4 text-slate-400" /> Pengaturan WhatsApp
                       </Link>
                       <div className="my-1 h-px bg-slate-100" />
                       <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
@@ -125,8 +126,8 @@ export default function Navbar() {
                 <Link href={`/dashboard/${role}/profile`} onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
                   <UserIcon className="h-4 w-4 text-slate-400" /> Profil
                 </Link>
-                <Link href="/settings/telegram" onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  <Settings className="h-4 w-4 text-slate-400" /> Pengaturan
+                <Link href={settingsHref} onClick={() => setIsMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  <Settings className="h-4 w-4 text-slate-400" /> Pengaturan WhatsApp
                 </Link>
                 <button onClick={() => signOut({ callbackUrl: "/login" })} className="mt-1 flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50">
                   <LogOut className="h-4 w-4" /> Keluar

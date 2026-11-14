@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ProfileForm from "@/components/profile/ProfileForm";
 import PasswordForm from "@/components/profile/PasswordForm";
-import TelegramLinkSection from "@/components/profile/TelegramLinkSection";
+import WhatsAppLinkSection from "@/components/profile/WhatsAppLinkSection";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface ProfileData {
@@ -20,11 +20,11 @@ interface ProfileData {
   taskCount: number;
   createdAt: string;
   updatedAt: string;
-  telegram: {
+  whatsapp: {
     connected: boolean;
-    chatId: string | null;
-    username: string | null;
-    connectedAt: string | null;
+    maskedPhoneNumber: string | null;
+    verifiedAt: string | null;
+    registrationStatus: string | null;
   };
 }
 
@@ -105,7 +105,7 @@ export default function ProfileClient({ initialData }: ProfileClientProps) {
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Profil</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Manajemen Profil</h1>
-          <p className="text-sm text-slate-500 sm:text-base">Kelola informasi akun, keamanan, dan integrasi Telegram Anda.</p>
+          <p className="text-sm text-slate-500 sm:text-base">Kelola informasi akun, keamanan, dan integrasi WhatsApp Anda.</p>
         </div>
       </div>
 
@@ -143,15 +143,15 @@ export default function ProfileClient({ initialData }: ProfileClientProps) {
 
           <Card className="rounded-2xl border-slate-200/80 shadow-sm">
             <CardHeader className="border-b border-slate-100 pb-4">
-              <CardTitle className="text-base font-semibold text-slate-900">Integrasi Telegram</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">Hubungkan Telegram untuk menerima notifikasi laporan.</p>
+              <CardTitle className="text-base font-semibold text-slate-900">Integrasi WhatsApp</CardTitle>
+              <p className="mt-1 text-sm text-slate-500">Hubungkan WhatsApp untuk menerima notifikasi laporan.</p>
             </CardHeader>
             <CardContent className="p-5 sm:p-6">
-              <TelegramLinkSection
-                connected={profile.telegram.connected}
-                chatId={profile.telegram.chatId}
-                username={profile.telegram.username}
-                connectedAt={profile.telegram.connectedAt}
+              <WhatsAppLinkSection
+                connected={profile.whatsapp.connected}
+                maskedPhoneNumber={profile.whatsapp.maskedPhoneNumber}
+                verifiedAt={profile.whatsapp.verifiedAt}
+                registrationStatus={profile.whatsapp.registrationStatus}
                 isLoading={isLoading}
               />
             </CardContent>
