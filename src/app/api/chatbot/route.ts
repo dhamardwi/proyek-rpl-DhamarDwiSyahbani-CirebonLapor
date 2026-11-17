@@ -124,6 +124,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Pertanyaan statistik/jumlah berbasis data: jangan biarkan AI mengarang.
+    // Jika data DB tersedia tapi intent tidak dikenali, minta klarifikasi.
+    const q = lastUserMessage.toLowerCase();
+    const looksLikeStatQuestion =
+      /(berapa|jumlah|total|ada berapa|banyak|apakah ada)/.test(q) &&
+      /(lapor|status|verifikasi|diverifikasi|ditolak|diproses|diterima|ditugaskan|selesai|prioritas|kritis|tinggi|sedang|rendah|pengguna|user|akun|tugas|penugasan|baru|tindak|dikerjakan)/.test(q);
+    if (dbData && looksLikeStatQuestion) {
+      return NextResponse.json({
+        success: true,
+        reply:
+          "Maaf, saya belum memahami maksud pertanyaan data Anda. Sebutkan dengan jelas status, prioritas, atau jenis data yang ingin ditanyakan (misalnya: menunggu verifikasi, sudah diverifikasi, sedang diproses, ditolak, selesai, tugas baru, prioritas tinggi, atau total).",
+        fallback: false,
+      });
+    }
+
     // Jika API key belum diset, pakai jawaban lokal agar chatbot tetap berguna
     if (!(await isChatbotAvailable())) {
       return NextResponse.json({

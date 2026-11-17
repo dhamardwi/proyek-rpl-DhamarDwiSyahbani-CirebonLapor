@@ -14,6 +14,13 @@ export const ROLE = {
 
 export type Role = (typeof ROLE)[keyof typeof ROLE];
 
+/**
+ * Akun teknis untuk menyimpan laporan/histori milik pengguna yang dihapus.
+ * Akun ini tidak dapat login dan tidak ditampilkan di Manajemen Pengguna.
+ */
+export const DELETED_USER_EMAIL = "deleted-user@system.cirebonlapor.local";
+export const DELETED_USER_NAME = "Pengguna Dihapus";
+
 // ------------------------------------
 // Report Status
 // ------------------------------------

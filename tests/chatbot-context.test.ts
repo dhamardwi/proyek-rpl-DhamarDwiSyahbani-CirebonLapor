@@ -143,6 +143,8 @@ test("petugas mendapat ringkasan tugas miliknya", () => {
       unreadNotifications: 1,
       whatsappConnected: false,
     },
+    total: 4,
+    selesai: 1,
     tasks: [
       {
         id: "cmtask123456",
@@ -154,12 +156,21 @@ test("petugas mendapat ringkasan tugas miliknya", () => {
         createdAt: new Date("2025-02-02T08:00:00.000Z"),
       },
     ],
+    byStatus: [
+      { status: "SELESAI", count: 1 },
+      { status: "SEDANG_DIPERBAIKI", count: 3 },
+    ],
+    taskByStatus: [
+      { status: "SELESAI", count: 1 },
+      { status: "SEDANG_DIPERBAIKI", count: 3 },
+    ],
   });
 
   const reply = answerDataQuestion("Apa tugas saya?", data, "PETUGAS") ?? "";
-  assert.match(reply, /total tugas Anda 4/);
+  assert.match(reply, /total 4/);
   assert.match(reply, /Perbaiki Jembatan/);
-  assert.match(reply, /belum selesai/);
+  assert.match(reply, /sedang diproses 3/);
+  assert.match(reply, /selesai 1/);
 });
 
 test("admin mendapat statistik pengguna dan verifikasi", () => {
@@ -204,7 +215,7 @@ test("admin mendapat statistik pengguna dan verifikasi", () => {
   assert.match(context, /terverifikasi yang belum ditugaskan: 3/);
 });
 
-test("admin membedakan laporan menunggu verifikasi dan sudah diverifikasi", () => {
+test("admin membedakan laporan menunggu verifikasi dan sudah diverifikasi (konsisten dashboard)", () => {
   const data = makeData({
     admin: {
       totalUsers: 12,
@@ -221,11 +232,11 @@ test("admin membedakan laporan menunggu verifikasi dan sudah diverifikasi", () =
 
   assert.equal(
     answerDataQuestion("Ada berapa laporan yang sudah diverifikasi?", data, "ADMIN"),
-    "Ada 8 laporan yang sudah diverifikasi."
+    "Laporan yang sudah diverifikasi ada 3."
   );
   assert.equal(
     answerDataQuestion("Ada berapa laporan yang sudah di verifikasi?", data, "ADMIN"),
-    "Ada 8 laporan yang sudah diverifikasi."
+    "Laporan yang sudah diverifikasi ada 3."
   );
   assert.equal(
     answerDataQuestion("Ada berapa laporan yang sudah selesai?", data, "ADMIN"),
@@ -235,9 +246,9 @@ test("admin membedakan laporan menunggu verifikasi dan sudah diverifikasi", () =
     answerDataQuestion("Berapa laporan yang menunggu verifikasi?", data, "ADMIN"),
     "Laporan yang menunggu verifikasi ada 2."
   );
-  assert.equal(
-    answerDataQuestion("Berapa laporan yang diverifikasi?", data, "ADMIN"),
-    "Apakah maksud Anda laporan yang menunggu verifikasi atau laporan yang sudah diverifikasi?"
+  assert.match(
+    answerDataQuestion("Berapa laporan yang diverifikasi?", data, "ADMIN") ?? "",
+    /Apakah maksud Anda laporan yang menunggu verifikasi atau laporan yang sudah diverifikasi/
   );
 });
 
@@ -261,9 +272,10 @@ test("pertanyaan peran lain ditolak sesuai peran pengguna", () => {
 test("masyarakat hanya mendapat hitungan laporan miliknya", () => {
   const data = makeData();
 
+  // "Sudah diverifikasi" = status DITERIMA (konsisten dashboard), bukan status lanjutan.
   assert.equal(
     answerDataQuestion("Berapa laporan saya yang sudah diverifikasi?", data, "MASYARAKAT"),
-    "Anda memiliki 2 laporan yang sudah diverifikasi."
+    "Laporan Anda yang sudah diverifikasi ada 0."
   );
   assert.equal(
     answerDataQuestion("Berapa laporan saya yang menunggu verifikasi?", data, "MASYARAKAT"),
@@ -324,15 +336,15 @@ test("jumlah laporan per prioritas dijawab spesifik untuk semua peran", () => {
 
   assert.equal(
     answerDataQuestion("Berapa laporan yang kritis?", data, "ADMIN"),
-    "Laporan yang berprioritas KRITIS ada 1."
+    "Laporan dengan prioritas kritis ada 1."
   );
   assert.equal(
     answerDataQuestion("Berapa laporan saya yang kritis?", data, "MASYARAKAT"),
-    "Laporan Anda yang berprioritas KRITIS ada 2."
+    "Laporan Anda dengan prioritas kritis ada 2."
   );
   assert.equal(
     answerDataQuestion("Berapa tugas yang kritis?", data, "PETUGAS"),
-    "Tugas yang berprioritas KRITIS ada 1."
+    "Tugas dengan prioritas kritis ada 1."
   );
 });
 
@@ -353,4 +365,185 @@ test("saran pertanyaan mengikuti peran pengguna", () => {
   assert.match(suggestQuestions("MASYARAKAT").join(" "), /Status laporan saya/);
   assert.match(suggestQuestions("PETUGAS").join(" "), /Apa tugas saya/);
   assert.match(suggestQuestions("ADMIN").join(" "), /menunggu verifikasi/);
+});
+
+function makeDashboardAdminData(): ChatbotDbData {
+  // Sesuai dashboard: Total 15, Menunggu 1, Sudah Diverifikasi(DITERIMA) 1,
+  // Sedang Diproses(SEDANG_DIPERBAIKI) 0, Selesai 10, Ditolak 1, Prioritas Tinggi(TINGGI+KRITIS) 3.
+  return makeData({
+    profile: {
+      name: "Admin Desa",
+      email: "admin@example.com",
+      role: "ADMIN",
+      isActive: true,
+      joinedAt,
+      reportCount: 0,
+      taskCount: 0,
+      unreadNotifications: 0,
+      whatsappConnected: false,
+    },
+    admin: {
+      totalUsers: 8,
+      activeUsers: 8,
+      usersByRole: [{ role: "ADMIN", count: 1 }, { role: "PETUGAS", count: 2 }, { role: "MASYARAKAT", count: 5 }],
+      verifiedUnassigned: 0,
+    },
+    total: 15,
+    menunggu: 1,
+    selesai: 10,
+    kritis: 0,
+    byStatus: [
+      { status: "SELESAI", count: 10 },
+      { status: "MENUNGGU_VERIFIKASI", count: 1 },
+      { status: "DITERIMA", count: 1 },
+      { status: "DITOLAK", count: 1 },
+      { status: "DITUGASKAN", count: 2 },
+    ],
+    byPriority: [
+      { priority: "RENDAH", count: 11 },
+      { priority: "SEDANG", count: 1 },
+      { priority: "TINGGI", count: 3 },
+    ],
+  });
+}
+
+test("admin: jawaban statistik konsisten dengan dashboard (kasus bug)", () => {
+  const data = makeDashboardAdminData();
+
+  assert.equal(answerDataQuestion("Ada berapa total laporan?", data, "ADMIN"), "Laporan ada 15.");
+  assert.equal(answerDataQuestion("Ada berapa laporan yang ditolak?", data, "ADMIN"), "Laporan yang ditolak ada 1.");
+  assert.equal(answerDataQuestion("Berapa laporan prioritas tinggi?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+  assert.equal(answerDataQuestion("Berapa laporan yang sudah diverifikasi?", data, "ADMIN"), "Laporan yang sudah diverifikasi ada 1.");
+  assert.equal(answerDataQuestion("Berapa laporan yang sedang diproses?", data, "ADMIN"), "Laporan yang sedang diproses ada 0.");
+  assert.equal(answerDataQuestion("Berapa laporan yang selesai?", data, "ADMIN"), "Laporan yang sudah selesai ada 10.");
+  assert.equal(answerDataQuestion("Berapa laporan yang menunggu verifikasi?", data, "ADMIN"), "Laporan yang menunggu verifikasi ada 1.");
+  assert.equal(answerDataQuestion("Berapa laporan yang ditolak saat ini?", data, "ADMIN"), "Laporan yang ditolak ada 1.");
+  assert.equal(
+    answerDataQuestion("Apakah ada laporan yang sedang diproses?", data, "ADMIN"),
+    "Tidak ada, laporan yang sedang diproses berjumlah 0."
+  );
+  assert.equal(answerDataQuestion("Berapa jumlah laporan dengan prioritas tinggi?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+});
+
+test("admin: variasi kalimat intent mengarah ke data yang sama", () => {
+  const data = makeDashboardAdminData();
+
+  // Ditolak / tidak disetujui
+  assert.equal(answerDataQuestion("Jumlah laporan yang ditolak berapa?", data, "ADMIN"), "Laporan yang ditolak ada 1.");
+  assert.equal(answerDataQuestion("Berapa banyak laporan yang tidak disetujui?", data, "ADMIN"), "Laporan yang ditolak ada 1.");
+
+  // Sedang diproses / ditangani / tahap penanganan
+  assert.equal(answerDataQuestion("Ada berapa laporan yang sedang ditangani?", data, "ADMIN"), "Laporan yang sedang diproses ada 0.");
+  assert.equal(answerDataQuestion("Berapa laporan yang sudah masuk tahap penanganan?", data, "ADMIN"), "Laporan yang sedang diproses ada 0.");
+  assert.equal(answerDataQuestion("Jumlah laporan dalam proses berapa?", data, "ADMIN"), "Laporan yang sedang diproses ada 0.");
+
+  // Diverifikasi
+  assert.equal(answerDataQuestion("Ada berapa laporan yang telah diverifikasi admin?", data, "ADMIN"), "Laporan yang sudah diverifikasi ada 1.");
+  assert.equal(answerDataQuestion("Berapa laporan yang lolos verifikasi?", data, "ADMIN"), "Laporan yang sudah diverifikasi ada 1.");
+
+  // Prioritas tinggi / urgensi
+  assert.equal(answerDataQuestion("Ada berapa laporan prioritas tinggi?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+  assert.equal(answerDataQuestion("Berapa laporan dengan tingkat urgensi tinggi?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+  assert.equal(answerDataQuestion("Berapa laporan yang membutuhkan penanganan segera?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+});
+
+test("jawaban statistik berubah dinamis mengikuti data (bukan hardcode)", () => {
+  const data = makeDashboardAdminData();
+  data.total = 20;
+  data.selesai = 12;
+  data.byStatus = [
+    { status: "SELESAI", count: 12 },
+    { status: "MENUNGGU_VERIFIKASI", count: 2 },
+    { status: "DITERIMA", count: 0 },
+    { status: "DITOLAK", count: 4 },
+    { status: "SEDANG_DIPERBAIKI", count: 2 },
+  ];
+  data.byPriority = [{ priority: "TINGGI", count: 1 }, { priority: "KRITIS", count: 2 }];
+
+  assert.equal(answerDataQuestion("Ada berapa total laporan?", data, "ADMIN"), "Laporan ada 20.");
+  assert.equal(answerDataQuestion("Ada berapa laporan yang ditolak?", data, "ADMIN"), "Laporan yang ditolak ada 4.");
+  assert.equal(answerDataQuestion("Berapa laporan yang sudah diverifikasi?", data, "ADMIN"), "Laporan yang sudah diverifikasi ada 0.");
+  assert.equal(answerDataQuestion("Berapa laporan yang sedang diproses?", data, "ADMIN"), "Laporan yang sedang diproses ada 2.");
+  assert.equal(answerDataQuestion("Berapa laporan prioritas tinggi?", data, "ADMIN"), "Laporan dengan prioritas tinggi ada 3.");
+});
+
+function makePetugasDashboardData(): ChatbotDbData {
+  // Sesuai dashboard petugas: Total 13, Tugas Baru(DITUGASKAN) 2, Sedang Diproses 1, Selesai 10.
+  return makeData({
+    profile: {
+      name: "Petugas Dhamar",
+      email: "petugas1@cirebonlapor.id",
+      role: "PETUGAS",
+      isActive: true,
+      joinedAt,
+      reportCount: 0,
+      taskCount: 13,
+      unreadNotifications: 0,
+      whatsappConnected: false,
+    },
+    total: 13,
+    menunggu: 0,
+    selesai: 10,
+    kritis: 0,
+    tasks: [
+      {
+        id: "cmtaskbaru01",
+        title: "Perbaiki Lampu Jalan",
+        status: "DITUGASKAN",
+        priority: "TINGGI",
+        facility: "Penerangan Jalan",
+        assignee: "Petugas Dhamar",
+        createdAt: new Date("2025-03-01T08:00:00.000Z"),
+      },
+    ],
+    byStatus: [
+      { status: "DITUGASKAN", count: 2 },
+      { status: "SEDANG_DIPERBAIKI", count: 1 },
+      { status: "SELESAI", count: 10 },
+    ],
+    taskByStatus: [
+      { status: "DITUGASKAN", count: 2 },
+      { status: "SEDANG_DIPERBAIKI", count: 1 },
+      { status: "SELESAI", count: 10 },
+    ],
+    taskByPriority: [{ priority: "TINGGI", count: 3 }, { priority: "RENDAH", count: 10 }],
+  });
+}
+
+test("petugas: jawaban statistik konsisten dengan dashboard (kasus bug tugas baru)", () => {
+  const data = makePetugasDashboardData();
+
+  assert.equal(answerDataQuestion("Ada berapa total penugasan saya?", data, "PETUGAS"), "Total penugasan ada 13.");
+  assert.equal(answerDataQuestion("Ada berapa tugas baru?", data, "PETUGAS"), "Tugas baru ada 2.");
+  assert.equal(answerDataQuestion("Ada berapa tugas yang sedang diproses?", data, "PETUGAS"), "Tugas yang sedang diproses ada 1.");
+  assert.equal(answerDataQuestion("Berapa tugas yang sudah selesai?", data, "PETUGAS"), "Tugas yang sudah selesai ada 10.");
+  assert.equal(answerDataQuestion("Apakah ada tugas baru untuk saya?", data, "PETUGAS"), "Ya, ada 2 tugas baru.");
+  assert.equal(answerDataQuestion("Berapa tugas yang sedang saya kerjakan?", data, "PETUGAS"), "Tugas yang sedang diproses ada 1.");
+  assert.equal(answerDataQuestion("Berapa tugas yang belum ditindaklanjuti?", data, "PETUGAS"), "Tugas baru ada 2.");
+});
+
+test("petugas: variasi kalimat intent dan data dinamis", () => {
+  const data = makePetugasDashboardData();
+
+  assert.equal(answerDataQuestion("Ada berapa tugas saya?", data, "PETUGAS"), "Total penugasan ada 13.");
+  assert.equal(answerDataQuestion("Berapa banyak laporan yang ditugaskan kepada saya?", data, "PETUGAS"), "Total penugasan ada 13.");
+  assert.equal(answerDataQuestion("Berapa tugas yang belum saya kerjakan?", data, "PETUGAS"), "Tugas baru ada 2.");
+  assert.equal(answerDataQuestion("Berapa penugasan yang perlu saya tindak lanjuti?", data, "PETUGAS"), "Tugas baru ada 2.");
+  assert.equal(answerDataQuestion("Ada berapa laporan yang sedang saya tangani?", data, "PETUGAS"), "Tugas yang sedang diproses ada 1.");
+  assert.equal(answerDataQuestion("Berapa penugasan yang sudah saya selesaikan?", data, "PETUGAS"), "Tugas yang sudah selesai ada 10.");
+  assert.equal(answerDataQuestion("Ada berapa tugas aktif?", data, "PETUGAS"), "Tugas aktif ada 3.");
+
+  // Dinamis: ubah data DB
+  data.total = 8;
+  data.selesai = 5;
+  data.profile!.taskCount = 8;
+  data.byStatus = [
+    { status: "DITUGASKAN", count: 1 },
+    { status: "SEDANG_DIPERBAIKI", count: 2 },
+    { status: "SELESAI", count: 5 },
+  ];
+  data.taskByStatus = data.byStatus;
+  assert.equal(answerDataQuestion("Ada berapa tugas baru?", data, "PETUGAS"), "Tugas baru ada 1.");
+  assert.equal(answerDataQuestion("Ada berapa tugas yang sedang diproses?", data, "PETUGAS"), "Tugas yang sedang diproses ada 2.");
+  assert.equal(answerDataQuestion("Ada berapa total penugasan saya?", data, "PETUGAS"), "Total penugasan ada 8.");
 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import db from "@/lib/db";
 import { RegisterSchema } from "@/lib/validations/auth";
+import { DELETED_USER_EMAIL } from "@/lib/constants";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,13 @@ export async function POST(req: NextRequest) {
     }
 
     const { name, email, password } = parsed.data;
+
+    if (email === DELETED_USER_EMAIL) {
+      return NextResponse.json(
+        { success: false, message: "Email tidak dapat digunakan. Gunakan email lain." },
+        { status: 422 }
+      );
+    }
 
     // 2. Cek apakah email sudah digunakan
     const existing = await db.user.findUnique({

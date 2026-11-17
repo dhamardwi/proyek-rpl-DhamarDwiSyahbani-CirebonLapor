@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import { maskWhatsappNumber } from "@/lib/whatsapp/config";
+import { DELETED_USER_EMAIL } from "@/lib/constants";
 import { z } from "zod";
 
 /**
@@ -114,6 +115,13 @@ export async function PUT(req: NextRequest) {
     });
 
     const validated = updateSchema.parse(body);
+
+    if (validated.email.trim().toLowerCase() === DELETED_USER_EMAIL) {
+      return NextResponse.json(
+        { success: false, message: "Email tidak dapat digunakan" },
+        { status: 400 }
+      );
+    }
 
     // Cek apakah email sudah digunakan oleh pengguna lain
     const existingUser = await db.user.findFirst({

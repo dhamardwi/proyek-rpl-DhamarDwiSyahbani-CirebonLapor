@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
+import { DELETED_USER_EMAIL } from "@/lib/constants";
 import { maskWhatsappNumber } from "@/lib/whatsapp/config";
 
 /**
@@ -32,12 +33,17 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") ?? "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") ?? "10", 10);
 
-    const where: Record<string, unknown> = {};
+    // Akun teknis penampung laporan pengguna terhapus tidak ditampilkan.
+    const where: Record<string, unknown> = {
+      email: { not: DELETED_USER_EMAIL },
+    };
 
     if (search) {
+      // SQLite tidak mendukung `mode: "insensitive"`; LIKE sudah
+      // case-insensitive untuk pencarian nama/email.
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
+        { email: { contains: search } },
       ];
     }
 
@@ -109,77 +115,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-/**
- * DELETE /api/users/:id
- * Menghapus pengguna (hanya Admin)
- */
-export const DELETE = (async (
-  req: NextRequest,
-  context: { params: Promise<Record<string, unknown>> }
-) => {
-  const params = await context.params;
-  const { id } = params as { id: string };
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Hanya Admin yang dapat menghapus pengguna." },
-        { status: 403 }
-      );
-    }
-
-    const userId = id;
-
-    if (userId === session.user.id) {
-      return NextResponse.json(
-        { success: false, message: "Tidak dapat menghapus akun Anda sendiri." },
-        { status: 400 }
-      );
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true, role: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Pengguna tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    const adminCount = await db.user.count({
-      where: { role: "ADMIN" },
-    });
-    if (adminCount <= 1) {
-      return NextResponse.json(
-        { success: false, message: "Tidak dapat menghapus Admin tunggal. Minimal harus ada 1 Admin." },
-        { status: 400 }
-      );
-    }
-
-    await db.user.delete({
-      where: { id: userId },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Pengguna ${user.name} berhasil dihapus.`,
-    });
-  } catch (error) {
-    console.error("[USERS_DELETE_ERROR]", error);
-    return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan server" },
-      { status: 500 }
-    );
-  }
-});

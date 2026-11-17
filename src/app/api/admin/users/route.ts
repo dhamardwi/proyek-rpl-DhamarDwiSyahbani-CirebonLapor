@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { DELETED_USER_EMAIL } from "@/lib/constants";
 
 // POST: Tambah Petugas Baru
 export async function POST(req: NextRequest) {
@@ -25,6 +26,10 @@ export async function POST(req: NextRequest) {
 
     if (!trimmedName || !normalizedEmail || !password || role !== "PETUGAS") {
       return NextResponse.json({ success: false, message: "Data tidak lengkap atau role tidak valid" }, { status: 422 });
+    }
+
+    if (normalizedEmail === DELETED_USER_EMAIL) {
+      return NextResponse.json({ success: false, message: "Email tidak dapat digunakan" }, { status: 422 });
     }
 
     // Samakan dengan policy registrasi: min 8 + kapital + kecil + angka

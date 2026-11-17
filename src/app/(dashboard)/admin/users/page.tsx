@@ -12,9 +12,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -62,6 +60,7 @@ export default function UserManagementPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -92,6 +91,7 @@ export default function UserManagementPage() {
   }, [page, pageSize, search, roleFilter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
   }, [fetchUsers]);
 
@@ -102,33 +102,51 @@ export default function UserManagementPage() {
 
   const handleDelete = (user: UserRow) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus pengguna "${user.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
+      setDeleteError(null);
       setUserToDelete(user);
       setShowDeleteModal(true);
     }
   };
 
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+    setDeleteError(null);
+    setDeletingId(null);
+  };
+
   const confirmDelete = async () => {
     if (!userToDelete) return;
+    setDeleteError(null);
     setDeletingId(userToDelete.id);
 
     try {
       const res = await fetch(`/api/users/${userToDelete.id}`, {
         method: "DELETE",
       });
-      const data: ApiResponse = await res.json();
+      const data: ApiResponse | null = await res.json().catch(() => null);
 
-      if (data.success) {
-        setShowDeleteModal(false);
-        setUserToDelete(null);
-        setDeletingId(null);
-        showToast(data.message || "Pengguna berhasil dihapus", "success");
-        fetchUsers();
+      if (res.ok && data?.success) {
+        const message = data.message || "Pengguna berhasil dihapus";
+        const shouldGoToPreviousPage = users.length === 1 && page > 1;
+        closeDeleteModal();
+        showToast(message, "success");
+        if (shouldGoToPreviousPage) {
+          setPage(page - 1);
+        } else {
+          fetchUsers();
+        }
       } else {
-        setToast({ message: data.message || "Gagal menghapus pengguna", type: "error" });
+        setDeleteError(
+          data?.message ||
+            (res.status === 404
+              ? "Pengguna tidak ditemukan atau sudah dihapus."
+              : `Gagal menghapus pengguna (HTTP ${res.status}).`)
+        );
         setDeletingId(null);
       }
     } catch {
-      setToast({ message: "Terjadi kesalahan server", type: "error" });
+      setDeleteError("Tidak dapat terhubung ke server. Silakan coba lagi.");
       setDeletingId(null);
     }
   };
@@ -324,7 +342,7 @@ export default function UserManagementPage() {
 
       {showDeleteModal && userToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={closeDeleteModal} />
           <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
@@ -332,7 +350,7 @@ export default function UserManagementPage() {
                 <p className="mt-1 text-sm text-slate-500">Tindakan ini tidak dapat dibatalkan.</p>
               </div>
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={closeDeleteModal}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 aria-label="Tutup"
               >
@@ -347,10 +365,15 @@ export default function UserManagementPage() {
               <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-700">
                 Laporan dan tugas terkait pengguna ini dapat terpengaruh setelah penghapusan.
               </div>
+              {deleteError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700">
+                  {deleteError}
+                </div>
+              )}
             </div>
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={closeDeleteModal}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
               >
                 Batal

@@ -27,25 +27,23 @@ export async function isChatbotAvailable(): Promise<boolean> {
   return config.isActive && Boolean(config.apiKey);
 }
 
-export const CHATBOT_SYSTEM_PROMPT = `Anda adalah Chatbot Asisten Cerdas untuk aplikasi pengaduan fasilitas umum "CirebonLapor". Tugas Anda adalah membantu pengguna berdasarkan ROLE aktif mereka saat ini: {USER_ROLE} (Role yang tersedia: MASYARAKAT, ADMIN, atau PETUGAS).
+export const CHATBOT_SYSTEM_PROMPT = `Anda adalah Chatbot Asisten untuk aplikasi pengaduan fasilitas umum "CirebonLapor". Peran pengguna saat ini: {USER_ROLE} (MASYARAKAT, ADMIN, atau PETUGAS).
 
-PENTING - ATURAN MENJAWAB:
-1. Anda memiliki akses ke data statistik halaman dashboard pengguna saat ini berupa JSON/Context berikut: {DASHBOARD_CONTEXT_DATA}
-2. Jika pengguna bertanya tentang data statistik (seperti total laporan, jumlah menunggu, verifikasi, selesai, penugasan, dll.), JANGAN JAWAB "Maaf, saya tidak tahu jawabannya". Ambil langsung angka yang valid dari {DASHBOARD_CONTEXT_DATA} sesuai dengan konteks role mereka.
-3. Panduan Data berdasarkan Role:
-   - Jika role MASYARAKAT: Jawab pertanyaan terkait total laporan mereka, laporan menunggu, dan laporan selesai.
-   - Jika role ADMIN: Jawab pertanyaan terkait total laporan keseluruhan, menunggu verifikasi, sudah diverifikasi, selesai, ditolak, dan prioritas tinggi.
-   - Jika role PETUGAS: Jawab pertanyaan terkait total penugasan, tugas baru, sedang diproses, dan tugas selesai.
-4. Jika pertanyaan di luar konteks data dashboard atau aplikasi CirebonLapor, berikan jawaban yang sopan dan relevan dengan batasan sistem Anda. Gunakan Bahasa Indonesia yang ramah, profesional, dan informatif.
-5. Jangan mengarang angka statistik atau menggunakan estimation AI untuk menjawab pertanyaan data - selalu gunakan data aktual dari konteks dashboard.
+SUMBER DATA (WAJIB):
+- Data aktual (database) ada di konteks berikut: {DASHBOARD_CONTEXT_DATA}
+- Untuk pertanyaan statistik/jumlah/status/prioritas/pengguna, gunakan HANYA angka dari konteks tersebut. Jangan mengarang, memperkirakan, atau mengganti angka.
+- Jika hasilnya 0, jawab 0 (jangan mengganti dengan total laporan). Jika data tidak tersedia, katakan datanya tidak tersedia.
 
-ATURAN UMUM:
-- Pahami maksud pertanyaan lebih dulu, lalu jawab langsung hal yang ditanyakan.
-- Jawab hanya sesuai konteks dan maksud pertanyaan. Jangan menambahkan informasi, penjelasan, saran, contoh, atau kesimpulan yang tidak diminta.
-- Jangan mengulang pertanyaan pengguna dan jangan membuka jawaban dengan basa-basi seperti "Tentu", "Baik", atau "Berikut penjelasannya".
-- Jangan memperluas pembahasan ke topik lain di luar pertanyaan.
-- Sesuaikan panjang jawaban dengan kebutuhan: pertanyaan sederhana dijawab singkat, pertanyaan yang butuh penjelasan dijawab secukupnya.
-- Gunakan bahasa Indonesia yang sederhana, jelas, dan alami.`;
+DEFINISI DASHBOARD (harus konsisten):
+- ADMIN: Menunggu Verifikasi = MENUNGGU_VERIFIKASI, Sudah Diverifikasi = DITERIMA, Sedang Diproses = SEDANG_DIPERBAIKI, Selesai = SELESAI, Ditolak = DITOLAK, Prioritas Tinggi (kartu) = TINGGI atau KRITIS, Total Laporan = seluruh laporan.
+- PETUGAS (hanya penugasan milik petugas login): Total Penugasan = seluruh tugas, Tugas Baru = DITUGASKAN, Sedang Diproses = SEDANG_DIPERBAIKI, Selesai = SELESAI.
+
+ATURAN JAWABAN:
+- Jawab langsung dan singkat sesuai pertanyaan.
+- Jangan membuka dengan basa-basi.
+- Jangan menampilkan data/angka milik peran lain.
+- Jika pertanyaan ambigu (mis. "diverifikasi" tanpa jelas menunggu/sudah), minta klarifikasi singkat.
+- Jika di luar cakupan data/aplikasi, jawab sopan bahwa Anda tidak memiliki datanya. Gunakan Bahasa Indonesia yang jelas.`;
 
 /** Pekerjaan chatbot per peran, dipakai untuk mengarahkan jawaban AI. */
 const ROLE_DUTIES: Record<string, string> = {

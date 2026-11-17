@@ -11,6 +11,7 @@
  */
 
 import db from "@/lib/db";
+import { DELETED_USER_EMAIL } from "@/lib/constants";
 
 const MAX_ITEMS = 5;
 const MAX_CONTEXT_CHARS = 3000;
@@ -93,8 +94,14 @@ export interface ChatbotDbData {
   recent: { title: string; status: string; priority: string; damageLevel: string; facility: string }[] | null;
 }
 
-/** Status laporan yang sudah lolos verifikasi (diterima dan seterusnya). */
-const VERIFIED_STATUSES = ["DITERIMA", "DITUGASKAN", "SEDANG_DIPERBAIKI", "SELESAI"];
+/**
+ * Status "Sudah Diverifikasi" pada dashboard admin = laporan yang diterima
+ * (lolos verifikasi). Konsisten dengan kartu "Sudah Diverifikasi" (DITERIMA).
+ */
+const VERIFIED_STATUSES = ["DITERIMA"];
+
+/** Status "Sedang Diproses" pada dashboard admin = sedang diperbaiki. */
+const IN_PROGRESS_STATUSES = ["SEDANG_DIPERBAIKI"];
 
 /** Jumlahkan count untuk status tertentu dari hasil groupBy. */
 function countStatuses(
@@ -103,6 +110,15 @@ function countStatuses(
 ): number {
   return rows
     .filter((row) => statuses.includes(row.status))
+    .reduce((sum, row) => sum + row.count, 0);
+}
+
+function countPriorities(
+  rows: { priority: string; count: number }[],
+  priorities: string[]
+): number {
+  return rows
+    .filter((row) => priorities.includes(row.priority))
     .reduce((sum, row) => sum + row.count, 0);
 }
 
@@ -333,8 +349,8 @@ export async function getChatbotDbData(
     const admin: ChatbotAdminStats | null =
       role === "ADMIN"
         ? await Promise.all([
-            db.user.count(),
-            db.user.count({ where: { isActive: true } }),
+            db.user.count({ where: { email: { not: DELETED_USER_EMAIL } } }),
+            db.user.count({ where: { isActive: true, email: { not: DELETED_USER_EMAIL } } }),
             db.user.groupBy({
               by: ["role"],
               where: { isActive: true },
@@ -429,9 +445,34 @@ export function formatDbContext(data: ChatbotDbData, role: ChatbotRole): string 
     );
   }
 
-  lines.push(
-    `Total laporan: ${data.total} | Menunggu verifikasi: ${data.menunggu} | Selesai: ${data.selesai} | Prioritas KRITIS: ${data.kritis}.`
-  );
+  const ditolak = countStatuses(data.byStatus, ["DITOLAK"]);
+  const diverifikasi = countStatuses(data.byStatus, VERIFIED_STATUSES);
+  const diproses = countStatuses(data.byStatus, IN_PROGRESS_STATUSES);
+  const prioritasTinggiGabungan = countPriorities(data.byPriority ?? [], ["TINGGI", "KRITIS"]);
+  const prioritasTinggiSaja = countPriorities(data.byPriority ?? [], ["TINGGI"]);
+
+  if (role === "PETUGAS") {
+    const tugasBaru = countStatuses(data.byStatus, ["DITUGASKAN"]);
+    const tugasAktif = Math.max(0, data.total - data.selesai);
+    lines.push(
+      `Total penugasan: ${data.total}. ` +
+        `Tugas baru (DITUGASKAN): ${tugasBaru}. ` +
+        `Sedang diproses (SEDANG_DIPERBAIKI): ${diproses}. ` +
+        `Selesai: ${data.selesai}. ` +
+        `Tugas aktif/belum selesai: ${tugasAktif}.`
+    );
+  } else {
+    lines.push(
+      `Total laporan: ${data.total}. ` +
+        `Menunggu verifikasi: ${data.menunggu}. ` +
+        `Sudah diverifikasi (DITERIMA): ${diverifikasi}. ` +
+        `Sedang diproses (SEDANG_DIPERBAIKI): ${diproses}. ` +
+        `Selesai: ${data.selesai}. ` +
+        `Ditolak: ${ditolak}. ` +
+        `Prioritas TINGGI: ${prioritasTinggiSaja}. ` +
+        `Prioritas TINGGI+KRITIS (kartu Prioritas Tinggi): ${prioritasTinggiGabungan}.`
+    );
+  }
 
   if (role === "MASYARAKAT") {
     if (data.mine.length > 0) {
@@ -666,37 +707,36 @@ export function answerChatbotIdentity(
 }
 
 /**
- * Prioritas kerusakan yang bisa ditanyakan.
- */
-const PRIORITY_KEYWORDS: { pattern: RegExp; key: string; label: string }[] = [
-  { pattern: /kritis/, key: "KRITIS", label: "KRITIS" },
-  { pattern: /tinggi/, key: "TINGGI", label: "TINGGI" },
-  { pattern: /sedang/, key: "SEDANG", label: "SEDANG" },
-  { pattern: /rendah/, key: "RENDAH", label: "RENDAH" },
-];
-
-/**
- * Hitungan spesifik per status laporan, disesuaikan dengan peran:
- * ADMIN = seluruh laporan, PETUGAS = laporan yang ditugaskan kepadanya,
- * MASYARAKAT = laporan miliknya.
+ * Kelompok status yang dapat ditanyakan. Urutan penting: kecocokan spesifik
+ * (diproses AI, menunggu/belum diverifikasi) dicek sebelum kecocokan umum.
  */
 const STATUS_COUNT_GROUPS: { key: RegExp; statuses: string[]; label: string }[] = [
   {
-    key: /menunggu verifikasi|belum diverifikasi/,
+    key: /menunggu verifikasi|belum diverifikasi|perlu diverifikasi/,
     statuses: ["MENUNGGU_VERIFIKASI"],
     label: "menunggu verifikasi",
   },
   {
-    key: /sedang diperbaiki|diperbaiki/,
-    statuses: ["SEDANG_DIPERBAIKI"],
-    label: "sedang diperbaiki",
+    key: /sudah diverifikasi|telah diverifikasi|lolos verifikasi|diverifikasi admin/,
+    statuses: ["DITERIMA"],
+    label: "sudah diverifikasi",
   },
   {
     key: /diproses ai/,
     statuses: ["DIPROSES_AI"],
     label: "sedang diproses AI",
   },
-  { key: /ditolak/, statuses: ["DITOLAK"], label: "ditolak" },
+  {
+    // Dashboard "Sedang Diproses" = SEDANG_DIPERBAIKI. "diperbaiki/dikerjakan/ditangani" juga cocok.
+    key: /sedang diperbaiki|sedang diproses|sedang dikerjakan|sedang saya kerjakan|sedang ditangani|sedang saya tangani|dalam proses|tahap penanganan|dalam pengerjaan|saya tangani|\bdiproses\b|\bdiperbaiki\b|\bdikerjakan\b/,
+    statuses: ["SEDANG_DIPERBAIKI"],
+    label: "sedang diproses",
+  },
+  {
+    key: /ditolak|tidak disetujui|penolakan/,
+    statuses: ["DITOLAK"],
+    label: "ditolak",
+  },
   {
     key: /ditugaskan|belum dikerjakan/,
     statuses: ["DITUGASKAN"],
@@ -706,6 +746,25 @@ const STATUS_COUNT_GROUPS: { key: RegExp; statuses: string[]; label: string }[] 
   { key: /selesai/, statuses: ["SELESAI"], label: "sudah selesai" },
 ];
 
+const STATUS_KEYWORD =
+  /menunggu verifikasi|belum diverifikasi|perlu diverifikasi|sudah diverifikasi|telah diverifikasi|lolos verifikasi|diverifikasi|diproses ai|sedang diperbaiki|sedang diproses|dalam proses|sedang ditangani|sedang dikerjakan|sedang saya kerjakan|tahap penanganan|dalam pengerjaan|\bdiproses\b|\bdiperbaiki\b|ditolak|tidak disetujui|penolakan|ditugaskan|belum dikerjakan|belum saya kerjakan|belum ditindaklanjuti|perlu ditindaklanjuti|tugas baru|penugasan baru|\bbaru\b|diterima|selesai|belum selesai|tugas aktif|penugasan aktif/;
+
+const PRIORITY_KEYWORD =
+  /prioritas|kritis|tinggi|urgensi|penanganan segera|segera ditangani|\bsedang\b|\brendah\b/;
+
+function isCountQuestion(q: string): boolean {
+  return /berapa|jumlah|total|ada berapa|banyak/.test(q) || /^apakah ada\b/.test(q);
+}
+
+function formatCountAnswer(label: string, count: number, yesNo: boolean): string {
+  if (yesNo) {
+    return count > 0
+      ? `Ya, ada ${count} ${label}.`
+      : `Tidak ada, ${label} berjumlah 0.`;
+  }
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)} ada ${count}.`;
+}
+
 export function answerStatusCountQuestion(
   message: string,
   data: ChatbotDbData,
@@ -713,15 +772,23 @@ export function answerStatusCountQuestion(
 ): string | null {
   const q = normalizeQuestion(message);
 
-  if (!/berapa|jumlah|total/.test(q)) return null;
+  if (!isCountQuestion(q)) return null;
   // Pertanyaan durasi/waktu bukan pertanyaan jumlah.
   if (/berapa lama|kapan|estimasi|berapa hari|sampai kapan|lamanya|prosesnya/.test(q)) {
     return null;
   }
-  // Ditangani khusus oleh jawaban admin (bukan status tunggal).
-  if (/belum ditugaskan|siap ditugaskan|sudah diverifikasi|telah diverifikasi|terverifikasi/.test(q)) {
+  // "Belum ditugaskan" (antrian verifikasi yang belum punya petugas) adalah
+  // metrik khusus admin; jangan salah tafsir sebagai status DITUGASKAN.
+  if ((role === "ADMIN" || role === "PETUGAS") && /belum ditugaskan|siap ditugaskan|belum ada petugas/.test(q)) {
     return null;
   }
+  // Pertanyaan "diverifikasi" yang ambigu (tanpa "sudah/menunggu/belum") perlu
+  // klarifikasi di handler admin; jangan paksa salah tafsir.
+  if (role === "ADMIN" && /\b(diverifikasi|verifikasi|terverifikasi)\b/.test(q) && !/sudah diverifikasi|telah diverifikasi|lolos verifikasi|diverifikasi admin|menunggu verifikasi|belum diverifikasi|perlu diverifikasi/.test(q)) {
+    return null;
+  }
+
+  const yesNo = /^apakah ada\b/.test(q);
 
   const rows =
     role === "ADMIN"
@@ -729,60 +796,117 @@ export function answerStatusCountQuestion(
       : role === "PETUGAS"
         ? data.taskByStatus
         : data.mineByStatus;
-  const noun =
-    role === "PETUGAS" && /\btugas\b/.test(q)
-      ? "Tugas"
-      : role === "ADMIN"
-        ? "Laporan"
-        : "Laporan Anda";
+  const petugasTaskNoun =
+    role === "PETUGAS" &&
+    (/\b(tugas|penugasan)\b/.test(q) ||
+      /saya kerjakan|saya tangani|tindak lanjuti|\bbaru\b|tugas aktif|penugasan aktif/.test(q));
+  const noun = petugasTaskNoun
+    ? "tugas"
+    : role === "ADMIN"
+      ? "laporan"
+      : "laporan Anda";
 
   if (/belum selesai/.test(q)) {
     const total =
       role === "ADMIN"
         ? data.total
         : role === "PETUGAS"
-          ? (data.profile?.taskCount ?? 0)
-          : (data.profile?.reportCount ?? 0);
+          ? (data.profile?.taskCount ?? data.total)
+          : (data.profile?.reportCount ?? data.total);
     const selesai = countStatuses(rows, ["SELESAI"]);
-    return `${noun} yang belum selesai ada ${total - selesai}.`;
+    const count = Math.max(0, total - selesai);
+    return formatCountAnswer(`${noun} yang belum selesai`, count, yesNo);
+  }
+
+  // Petugas: "tugas baru / belum saya kerjakan / perlu ditindaklanjuti"
+  // sesuai dashboard = status DITUGASKAN milik petugas login.
+  if (
+    role === "PETUGAS" &&
+    /tugas baru|penugasan baru|\bbaru\b|belum dikerjakan|belum saya kerjakan|belum ditindaklanjuti|perlu ditindaklanjuti|perlu saya tindak lanjuti/.test(q)
+  ) {
+    const count = countStatuses(rows, ["DITUGASKAN"]);
+    return formatCountAnswer("tugas baru", count, yesNo);
+  }
+
+  // Petugas: tugas aktif = belum selesai (DITUGASKAN + SEDANG_DIPERBAIKI).
+  if (role === "PETUGAS" && /tugas aktif|penugasan aktif/.test(q)) {
+    const count = Math.max(0, data.total - data.selesai);
+    return formatCountAnswer("tugas aktif", count, yesNo);
+  }
+
+  // Petugas: "ditugaskan kepada saya / penugasan saya / tugas saya" bermakna
+  // total penugasan milik petugas (bukan status DITUGASKAN).
+  if (
+    role === "PETUGAS" &&
+    /total penugasan|semua (tugas|penugasan)|seluruh (tugas|penugasan)|penugasan saya|tugas saya|ditugaskan kepada saya|ditugaskan ke saya|ditugaskan untuk saya|laporan yang ditugaskan/.test(q)
+  ) {
+    const total = data.profile?.taskCount ?? data.total;
+    const label = "total penugasan";
+    if (yesNo) {
+      return total > 0 ? `Ya, ada ${total} ${label}.` : `Tidak ada, ${label} berjumlah 0.`;
+    }
+    return `${label.charAt(0).toUpperCase()}${label.slice(1)} ada ${total}.`;
   }
 
   for (const group of STATUS_COUNT_GROUPS) {
     if (group.key.test(q)) {
-      return `${noun} yang ${group.label} ada ${countStatuses(rows, group.statuses)}.`;
+      const count = countStatuses(rows, group.statuses);
+      return formatCountAnswer(`${noun} yang ${group.label}`, count, yesNo);
     }
   }
 
-  // Pertanyaan lain (pengguna/verifikasi/akun) → handler khusus.
-  if (/pengguna|user|akun|profil|verifikasi/.test(q)) return null;
+  // Pertanyaan lain (pengguna/akun/profil) → handler khusus.
+  if (/pengguna|user|akun|profil/.test(q)) return null;
 
-  // Jumlah per prioritas kerusakan.
+  // Jumlah per prioritas.
   const priorityRows =
     role === "ADMIN"
-      ? (data.byPriority ?? []).map((row) => ({ key: row.priority, count: row.count }))
+      ? (data.byPriority ?? [])
       : role === "PETUGAS"
-        ? (data.taskByPriority ?? []).map((row) => ({ key: row.priority, count: row.count }))
-        : (data.mineByPriority ?? []).map((row) => ({ key: row.priority, count: row.count }));
-  const matchedPriority = PRIORITY_KEYWORDS.find((p) => p.pattern.test(q));
-  if (matchedPriority) {
-    const count = priorityRows
-      .filter((row) => row.key === matchedPriority.key)
-      .reduce((sum, row) => sum + row.count, 0);
-    const targetNoun =
-      role === "PETUGAS" && /\btugas\b/.test(q)
-        ? "Tugas yang berprioritas "
-        : role === "ADMIN"
-          ? "Laporan yang berprioritas "
-          : "Laporan Anda yang berprioritas ";
-    return `${targetNoun}${matchedPriority.label} ada ${count}.`;
+        ? (data.taskByPriority ?? [])
+        : (data.mineByPriority ?? []);
+  const priorityNoun = role === "PETUGAS" && /\btugas\b/.test(q) ? "tugas" : noun;
+
+  // "Prioritas tinggi" pada dashboard admin = TINGGI + KRITIS.
+  const asksHighPriority =
+    /prioritas tinggi|urgensi tinggi|penanganan segera|segera ditangani|membutuhkan penanganan/.test(q) ||
+    (/\btinggi\b/.test(q) && /prioritas|urgensi/.test(q));
+  if (asksHighPriority && !/\bkritis\b/.test(q)) {
+    const count = countPriorities(priorityRows, ["TINGGI", "KRITIS"]);
+    return formatCountAnswer(`${priorityNoun} dengan prioritas tinggi`, count, yesNo);
+  }
+  if (/\bkritis\b/.test(q) && /prioritas|urgensi|laporan|tugas|berapa|jumlah|ada/.test(q)) {
+    const count = countPriorities(priorityRows, ["KRITIS"]);
+    return formatCountAnswer(`${priorityNoun} dengan prioritas kritis`, count, yesNo);
+  }
+  if (/\bsedang\b/.test(q) && /prioritas|urgensi/.test(q)) {
+    const count = countPriorities(priorityRows, ["SEDANG"]);
+    return formatCountAnswer(`${priorityNoun} dengan prioritas sedang`, count, yesNo);
+  }
+  if (/\brendah\b/.test(q) && /prioritas|urgensi/.test(q)) {
+    const count = countPriorities(priorityRows, ["RENDAH"]);
+    return formatCountAnswer(`${priorityNoun} dengan prioritas rendah`, count, yesNo);
   }
 
-  // Pertanyaan jumlah laporan tanpa status/prioritas spesifik → jawab total milik scope.
-  const STATUS_KEYWORD =
-    /menunggu verifikasi|sedang diperbaiki|diperbaiki|diproses ai|ditolak|ditugaskan|diterima|selesai|belum selesai|prioritas|kritis|tinggi|sedang|rendah|berat|ringan/;
-  if (/berapa|jumlah|total/.test(q) && !STATUS_KEYWORD.test(q)) {
-    const total = role === "ADMIN" ? data.total : (data.profile?.reportCount ?? data.mine.length);
-    return `${noun} ada ${total}.`;
+  // Jika pertanyaan menyebut status/prioritas yang tidak dikenali, jangan
+  // jatuh ke total laporan.
+  if (STATUS_KEYWORD.test(q) || PRIORITY_KEYWORD.test(q)) return null;
+
+  // Jumlah laporan/tugas tanpa status/prioritas spesifik → total milik scope.
+  if (/\b(laporan|tugas|penugasan|data|statistik|rekap)\b/.test(q) || /berapa|jumlah|total|ada berapa|banyak/.test(q)) {
+    const total =
+      role === "ADMIN"
+        ? data.total
+        : role === "PETUGAS"
+          ? (data.profile?.taskCount ?? data.total)
+          : (data.profile?.reportCount ?? data.mine.length);
+    const label = role === "PETUGAS" ? "total penugasan" : noun;
+    if (yesNo) {
+      return total > 0
+        ? `Ya, ada ${total} ${label}.`
+        : `Tidak ada, ${label} berjumlah 0.`;
+    }
+    return `${label.charAt(0).toUpperCase()}${label.slice(1)} ada ${total}.`;
   }
 
   return null;
@@ -791,7 +915,7 @@ export function answerStatusCountQuestion(
 /**
  * Hitungan status untuk user tertentu (sesuai peran):
  * - PETUGAS → tugas/penugasan milik user tersebut.
- * - Masyarakah/Admin → laporan milik user tersebut.
+ * - Masyarakat/Admin → laporan milik user tersebut.
  * Dipakai ketika pengguna menanyakan sesuai nama card user tertentu.
  */
 export async function answerUserStatusCount(
@@ -802,21 +926,24 @@ export async function answerUserStatusCount(
 ): Promise<string | null> {
   const q = normalizeQuestion(message);
   const noun =
-    asPetugas || (role === "PETUGAS" && /\btugas\b/.test(q))
-      ? "Tugas"
+    asPetugas ||
+    (role === "PETUGAS" &&
+      (/\b(tugas|penugasan)\b/.test(q) ||
+        /saya kerjakan|saya tangani|tindak lanjuti|\bbaru\b|tugas aktif|penugasan aktif/.test(q)))
+      ? "tugas"
       : role === "ADMIN"
-        ? "Laporan"
-        : "Laporan Anda";
+        ? "laporan"
+        : "laporan Anda";
 
-  if (!/berapa|jumlah|total/.test(q)) return null;
-  // Pertanyaan durasi/waktu bukan pertanyaan jumlah.
+  if (!isCountQuestion(q)) return null;
   if (/berapa lama|kapan|estimasi|berapa hari|sampai kapan|lamanya|prosesnya/.test(q)) {
     return null;
   }
-  // Ditangani khusus oleh jawaban admin (bukan status tunggal).
-  if (/belum ditugaskan|siap ditugaskan|sudah diverifikasi|telah diverifikasi|terverifikasi/.test(q)) {
+  if (/belum ditugaskan|siap ditugaskan|belum ada petugas/.test(q)) {
     return null;
   }
+
+  const yesNo = /^apakah ada\b/.test(q);
 
   const rows = asPetugas
     ? await db.report.groupBy({
@@ -825,20 +952,32 @@ export async function answerUserStatusCount(
         _count: { status: true },
       })
     : await db.report.groupBy({ by: ["status"], where: { userId }, _count: { status: true } });
-
   const statusRows = rows.map((r) => ({ status: r.status, count: r._count.status }));
 
+  const total = asPetugas
+    ? await db.report.count({ where: { assignedTo: userId } })
+    : await db.report.count({ where: { userId } });
+
   if (/belum selesai/.test(q)) {
-    const total = asPetugas
-      ? await db.report.count({ where: { assignedTo: userId } })
-      : await db.report.count({ where: { userId } });
     const selesai = countStatuses(statusRows, ["SELESAI"]);
-    return `${noun} yang belum selesai ada ${total - selesai}.`;
+    return formatCountAnswer(`${noun} yang belum selesai`, Math.max(0, total - selesai), yesNo);
+  }
+
+  if (
+    asPetugas &&
+    /tugas baru|penugasan baru|\bbaru\b|belum dikerjakan|belum saya kerjakan|belum ditindaklanjuti|perlu ditindaklanjuti|perlu saya tindak lanjuti/.test(q)
+  ) {
+    const count = countStatuses(statusRows, ["DITUGASKAN"]);
+    return formatCountAnswer("tugas baru", count, yesNo);
+  }
+
+  if (asPetugas && /tugas aktif|penugasan aktif/.test(q)) {
+    return formatCountAnswer("tugas aktif", Math.max(0, total - countStatuses(statusRows, ["SELESAI"])), yesNo);
   }
 
   for (const group of STATUS_COUNT_GROUPS) {
     if (group.key.test(q)) {
-      return `${noun} yang ${group.label} ada ${countStatuses(statusRows, group.statuses)}.`;
+      return formatCountAnswer(`${noun} yang ${group.label}`, countStatuses(statusRows, group.statuses), yesNo);
     }
   }
 
@@ -847,31 +986,36 @@ export async function answerUserStatusCount(
         by: ["priority"],
         where: { assignedTo: userId },
         _count: { priority: true },
-      })).map((r) => ({ key: r.priority, count: r._count.priority }))
+      })).map((r) => ({ priority: r.priority, count: r._count.priority }))
     : (await db.report.groupBy({
         by: ["priority"],
         where: { userId },
         _count: { priority: true },
-      })).map((r) => ({ key: r.priority, count: r._count.priority }));
-  const matchedPriority = PRIORITY_KEYWORDS.find((p) => p.pattern.test(q));
-  if (matchedPriority) {
-    const count = priorityRows
-      .filter((row) => row.key === matchedPriority.key)
-      .reduce((sum, row) => sum + row.count, 0);
-    return `${noun} yang berprioritas ${matchedPriority.label} ada ${count}.`;
+      })).map((r) => ({ priority: r.priority, count: r._count.priority }));
+
+  const asksHighPriority =
+    /prioritas tinggi|urgensi tinggi|penanganan segera|segera ditangani|membutuhkan penanganan/.test(q) ||
+    (/\btinggi\b/.test(q) && /prioritas|urgensi/.test(q));
+  if (asksHighPriority && !/\bkritis\b/.test(q)) {
+    return formatCountAnswer(`${noun} dengan prioritas tinggi`, countPriorities(priorityRows, ["TINGGI", "KRITIS"]), yesNo);
+  }
+  if (/\bkritis\b/.test(q) && /prioritas|urgensi|laporan|tugas|berapa|jumlah|ada/.test(q)) {
+    return formatCountAnswer(`${noun} dengan prioritas kritis`, countPriorities(priorityRows, ["KRITIS"]), yesNo);
+  }
+  if (/\bsedang\b/.test(q) && /prioritas|urgensi/.test(q)) {
+    return formatCountAnswer(`${noun} dengan prioritas sedang`, countPriorities(priorityRows, ["SEDANG"]), yesNo);
+  }
+  if (/\brendah\b/.test(q) && /prioritas|urgensi/.test(q)) {
+    return formatCountAnswer(`${noun} dengan prioritas rendah`, countPriorities(priorityRows, ["RENDAH"]), yesNo);
   }
 
-  // Pertanyaan jumlah laporan tanpa status/prioritas spesifik → jawab total milik scope.
-  const STATUS_KEYWORD =
-    /menunggu verifikasi|sedang diperbaiki|diperbaiki|diproses ai|ditolak|ditugaskan|diterima|selesai|belum selesai|prioritas|kritis|tinggi|sedang|rendah|berat|ringan/;
-  if (/berapa|jumlah|total/.test(q) && !STATUS_KEYWORD.test(q)) {
-    const total = asPetugas
-      ? await db.report.count({ where: { assignedTo: userId } })
-      : await db.report.count({ where: { userId } });
-    return `${noun} ada ${total}.`;
-  }
+  if (STATUS_KEYWORD.test(q) || PRIORITY_KEYWORD.test(q)) return null;
 
-  return null;
+  const totalLabel = asPetugas ? "total penugasan" : noun;
+  if (yesNo) {
+    return total > 0 ? `Ya, ada ${total} ${totalLabel}.` : `Tidak ada, ${totalLabel} berjumlah 0.`;
+  }
+  return `${totalLabel.charAt(0).toUpperCase()}${totalLabel.slice(1)} ada ${total}.`;
 }
 
 /** Pola nama user/petugas + nomor, mis. "masyarakat 1", "petugas 2". */
@@ -1035,25 +1179,21 @@ export function answerDataQuestion(
 
   if (role === "ADMIN" && data.admin) {
     if (/belum ditugaskan|siap ditugaskan|belum ada petugas/.test(q)) {
-      return `Ada ${data.admin.verifiedUnassigned} laporan terverifikasi yang belum ditugaskan ke petugas.`;
+      const count = data.admin.verifiedUnassigned;
+      if (/^apakah ada\b/.test(q)) {
+        return count > 0
+          ? `Ya, ada ${count} laporan terverifikasi yang belum ditugaskan ke petugas.`
+          : "Tidak ada, laporan terverifikasi yang belum ditugaskan berjumlah 0.";
+      }
+      return `Ada ${count} laporan terverifikasi yang belum ditugaskan ke petugas.`;
     }
 
-    if (/menunggu verifikasi|belum diverifikasi|perlu verifikasi/.test(q)) {
-      return `Ada ${data.menunggu} laporan yang menunggu verifikasi.`;
-    }
-
-    if (/sudah diverifikasi|telah diverifikasi|terverifikasi|verified/.test(q)) {
-      const verified = countStatuses(data.byStatus, VERIFIED_STATUSES);
-      return `Ada ${verified} laporan yang sudah diverifikasi.`;
-    }
-
-    if (/ditolak|penolakan/.test(q)) {
-      const rejected = countStatuses(data.byStatus, ["DITOLAK"]);
-      return `Ada ${rejected} laporan yang ditolak.`;
-    }
-
-    if (/verifikasi/.test(q)) {
-      return "Apakah maksud Anda laporan yang menunggu verifikasi atau laporan yang sudah diverifikasi?";
+    // Pertanyaan verifikasi yang ambigu → minta klarifikasi.
+    if (
+      /\b(diverifikasi|verifikasi|terverifikasi)\b/.test(q) &&
+      !/sudah diverifikasi|telah diverifikasi|lolos verifikasi|diverifikasi admin|menunggu verifikasi|belum diverifikasi|perlu diverifikasi/.test(q)
+    ) {
+      return "Apakah maksud Anda laporan yang menunggu verifikasi atau laporan yang sudah diverifikasi (status DITERIMA)?";
     }
 
     if (/berapa.*(pengguna|user|akun)|jumlah.*(pengguna|user|akun)|pengguna aktif|user aktif/.test(q)) {
@@ -1205,32 +1345,32 @@ export function answerDataQuestion(
     return `Jenis fasilitas dan jumlah laporannya:\n${list}`;
   }
 
-  // 12. Tugas petugas
+  // 12. Tugas petugas (daftar/detail; pertanyaan jumlah ditangani oleh answerStatusCountQuestion)
   if (role === "PETUGAS" && (asksOwn || asksTask)) {
+    const totalTasks = data.profile?.taskCount ?? data.total;
+    if (totalTasks === 0) {
+      return "Anda belum memiliki tugas/penugasan.";
+    }
     if (data.tasks.length === 0) {
-      return "Anda belum memiliki tugas perbaikan.";
+      const selesai = countStatuses(data.taskByStatus, ["SELESAI"]);
+      const baru = countStatuses(data.taskByStatus, ["DITUGASKAN"]);
+      const diproses = countStatuses(data.taskByStatus, ["SEDANG_DIPERBAIKI"]);
+      return `Total penugasan Anda ${totalTasks} (tugas baru: ${baru}, sedang diproses: ${diproses}, selesai: ${selesai}).`;
     }
-    const totalTasks = data.profile?.taskCount ?? data.tasks.length;
     const selesai = countStatuses(data.taskByStatus, ["SELESAI"]);
-    if (/berapa|jumlah/.test(q)) {
-      if (/belum selesai/.test(q)) {
-        return `Anda memiliki ${totalTasks - selesai} tugas yang belum selesai.`;
-      }
-      if (/selesai/.test(q)) {
-        return `Anda memiliki ${selesai} tugas yang sudah selesai.`;
-      }
-      if (/sedang diperbaiki|dikerjakan|proses/.test(q)) {
-        return `Anda memiliki ${countStatuses(data.taskByStatus, ["SEDANG_DIPERBAIKI"])} tugas yang sedang diperbaiki.`;
-      }
-      if (/ditugaskan|belum dikerjakan/.test(q)) {
-        return `Anda memiliki ${countStatuses(data.taskByStatus, ["DITUGASKAN"])} tugas yang belum dikerjakan.`;
-      }
-    }
+    const baru = countStatuses(data.taskByStatus, ["DITUGASKAN"]);
+    const diproses = countStatuses(data.taskByStatus, ["SEDANG_DIPERBAIKI"]);
     const list = data.tasks
-      .map((t) => `• "${safeText(t.title, 80)}" — status ${t.status}, prioritas ${t.priority}`)
+      .map(
+        (t) =>
+          `• "${safeText(t.title, 80)}" (${t.facility}) — status ${t.status}, prioritas ${t.priority}` +
+          (t.assignee ? `, petugas ${t.assignee}` : "")
+      )
       .join("\n");
-    const unfinished = totalTasks - selesai;
-    return `Jumlah total tugas Anda ${totalTasks}; dari ${data.tasks.length} tugas terbaru, ${unfinished} belum selesai.\n${list}`;
+    return (
+      `Ringkasan tugas Anda: total ${totalTasks}, tugas baru ${baru}, sedang diproses ${diproses}, selesai ${selesai}.\n` +
+      `Daftar tugas terbaru:\n${list}`
+    );
   }
 
   // 13. Laporan milik user
