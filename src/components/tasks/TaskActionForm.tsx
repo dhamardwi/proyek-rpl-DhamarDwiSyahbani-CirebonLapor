@@ -1,15 +1,15 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
+/* eslint-disable @next/next/no-img-element -- preview gambar upload dengan dimensi dinamis; <Image> akan mengubah layout & tampilan */
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Wrench, CheckCircle2, AlertCircle, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface TaskActionFormProps {
   reportId: string;
@@ -68,7 +68,7 @@ export default function TaskActionForm({ reportId, currentStatus }: TaskActionFo
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Gagal memperbarui status");
+        throw new Error(getErrorMessage(data, "Gagal memperbarui status"));
       }
 
       setSuccess(data.message);
@@ -86,8 +86,6 @@ export default function TaskActionForm({ reportId, currentStatus }: TaskActionFo
   if (currentStatus === "SELESAI" || currentStatus === "DITOLAK") {
     return null;
   }
-
-  const statusVariant = currentStatus === "DITUGASKAN" ? "warning" : "success";
 
   return (
     <Card>

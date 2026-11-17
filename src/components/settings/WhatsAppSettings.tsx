@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -84,7 +85,7 @@ export default function WhatsAppSettings({ initialData }: WhatsappSettingsProps)
       const res = await fetch("/api/settings/whatsapp", { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal mengambil status WhatsApp.");
+        throw new Error(getErrorMessage(json, "Gagal mengambil status WhatsApp."));
       }
       setData(json.data as WhatsappSettingsData);
     } catch (err) {
@@ -108,12 +109,12 @@ export default function WhatsAppSettings({ initialData }: WhatsappSettingsProps)
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal mengirim pengajuan WhatsApp.");
+        throw new Error(getErrorMessage(json, "Gagal mengirim pengajuan WhatsApp."));
       }
 
       setPhoneNumber("");
       setShowForm(false);
-      setNotice(json.message || "Pengajuan nomor WhatsApp berhasil dikirim.");
+      setNotice(getErrorMessage(json, "Pengajuan nomor WhatsApp berhasil dikirim."));
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengirim pengajuan WhatsApp.");
@@ -136,11 +137,11 @@ export default function WhatsAppSettings({ initialData }: WhatsappSettingsProps)
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Kode OTP tidak valid.");
+        throw new Error(getErrorMessage(json, "Kode OTP tidak valid."));
       }
 
       setOtp("");
-      setNotice(json.message || "Nomor WhatsApp berhasil diverifikasi.");
+      setNotice(getErrorMessage(json, "Nomor WhatsApp berhasil diverifikasi."));
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kode OTP tidak valid.");
@@ -158,9 +159,9 @@ export default function WhatsAppSettings({ initialData }: WhatsappSettingsProps)
       const res = await fetch("/api/settings/whatsapp/resend", { method: "POST" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal mengirim ulang OTP.");
+        throw new Error(getErrorMessage(json, "Gagal mengirim ulang OTP."));
       }
-      setNotice(json.message || "Kode OTP baru telah dikirim.");
+      setNotice(getErrorMessage(json, "Kode OTP baru telah dikirim."));
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengirim ulang OTP.");
@@ -180,9 +181,9 @@ export default function WhatsAppSettings({ initialData }: WhatsappSettingsProps)
       const res = await fetch("/api/settings/whatsapp", { method: "DELETE" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal memutuskan koneksi WhatsApp.");
+        throw new Error(getErrorMessage(json, "Gagal memutuskan koneksi WhatsApp."));
       }
-      setNotice(json.message || "Koneksi WhatsApp berhasil diputuskan.");
+      setNotice(getErrorMessage(json, "Koneksi WhatsApp berhasil diputuskan."));
       await refreshStatus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memutuskan koneksi WhatsApp.");

@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
@@ -126,7 +127,7 @@ export default function WhatsappRegistrationsClient({
       });
       const json = await readJsonSafe(res);
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal memuat pengajuan");
+        throw new Error(getErrorMessage(json, "Gagal memuat pengajuan"));
       }
       setRows(json.data?.registrations ?? []);
     } catch (error) {
@@ -158,9 +159,9 @@ export default function WhatsappRegistrationsClient({
       });
       const json = await readJsonSafe(res);
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal memproses pengajuan");
+        throw new Error(getErrorMessage(json, "Gagal memproses pengajuan"));
       }
-      showToast(json.message || "Pengajuan berhasil diproses", "success");
+      showToast(getErrorMessage(json, "Pengajuan berhasil diproses"), "success");
       setRejectTarget(null);
       setRejectReason("");
       await loadRegistrations(statusFilter, search);

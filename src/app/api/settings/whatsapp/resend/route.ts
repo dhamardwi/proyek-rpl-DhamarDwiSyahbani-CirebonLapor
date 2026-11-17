@@ -1,20 +1,13 @@
-import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import db from "@/lib/db";
+import { noStore } from "@/lib/api-response";
 import {
   resendOtp,
   WhatsappLinkError,
 } from "@/lib/whatsapp/linking";
 
 export const dynamic = "force-dynamic";
-
-function noStore(body: unknown, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
 
 export async function POST() {
   const session = await getServerSession(authOptions);

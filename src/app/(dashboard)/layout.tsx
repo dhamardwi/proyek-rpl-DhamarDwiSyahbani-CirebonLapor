@@ -31,10 +31,12 @@ export default function DashboardLayout({ children }: PropsWithChildren) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- Menutup sidebar/menu saat rute berubah adalah perilaku existing yang dipertahankan */
   useEffect(() => {
     setIsSidebarOpen(false);
     setIsUserMenuOpen(false);
   }, [pathname]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const profileHref = role ? `/dashboard/${role.toLowerCase()}/profile` : "/dashboard";
 

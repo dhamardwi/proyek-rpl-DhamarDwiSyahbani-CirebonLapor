@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useUserManagement } from "@/hooks/use-user-management";
+import { getPaginationRange } from "@/lib/ui-helpers";
 import {
   Search,
   User,
@@ -17,26 +18,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
-interface UserRow {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  isActive: boolean;
-  phone: string;
-  address: string;
-  reportCount: number;
-  taskCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ApiResponse<T = unknown> {
-  success: boolean;
-  message?: string;
-  data?: T;
-}
-
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
   PETUGAS: "Petugas",
@@ -50,108 +31,28 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: pageSize.toString(),
-        ...(search && { search }),
-        ...(roleFilter && { role: roleFilter }),
-      });
-      const res = await fetch(`/api/users?${params}`);
-      const data: ApiResponse<{ users: UserRow[]; total: number; page: number; pageSize: number; totalPages: number }> = await res.json();
-
-      if (data.success && data.data) {
-        setUsers(data.data.users);
-        setTotal(data.data.total);
-        setPage(data.data.page);
-        setPageSize(data.data.pageSize);
-      } else {
-        setToast({ message: data.message || "Gagal memuat daftar pengguna", type: "error" });
-      }
-    } catch {
-      setToast({ message: "Terjadi kesalahan server", type: "error" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, pageSize, search, roleFilter]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const showToast = (message: string, type: "success" | "error") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 5000);
-  };
-
-  const handleDelete = (user: UserRow) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus pengguna "${user.name}"? Tindakan ini tidak dapat dibatalkan.`)) {
-      setDeleteError(null);
-      setUserToDelete(user);
-      setShowDeleteModal(true);
-    }
-  };
-
-  const closeDeleteModal = () => {
-    setShowDeleteModal(false);
-    setUserToDelete(null);
-    setDeleteError(null);
-    setDeletingId(null);
-  };
-
-  const confirmDelete = async () => {
-    if (!userToDelete) return;
-    setDeleteError(null);
-    setDeletingId(userToDelete.id);
-
-    try {
-      const res = await fetch(`/api/users/${userToDelete.id}`, {
-        method: "DELETE",
-      });
-      const data: ApiResponse | null = await res.json().catch(() => null);
-
-      if (res.ok && data?.success) {
-        const message = data.message || "Pengguna berhasil dihapus";
-        const shouldGoToPreviousPage = users.length === 1 && page > 1;
-        closeDeleteModal();
-        showToast(message, "success");
-        if (shouldGoToPreviousPage) {
-          setPage(page - 1);
-        } else {
-          fetchUsers();
-        }
-      } else {
-        setDeleteError(
-          data?.message ||
-            (res.status === 404
-              ? "Pengguna tidak ditemukan atau sudah dihapus."
-              : `Gagal menghapus pengguna (HTTP ${res.status}).`)
-        );
-        setDeletingId(null);
-      }
-    } catch {
-      setDeleteError("Tidak dapat terhubung ke server. Silakan coba lagi.");
-      setDeletingId(null);
-    }
-  };
-
-  const totalPages = Math.ceil(total / pageSize);
+  const {
+    users,
+    total,
+    page,
+    pageSize,
+    search,
+    roleFilter,
+    isLoading,
+    deletingId,
+    showDeleteModal,
+    userToDelete,
+    deleteError,
+    toast,
+    setPage,
+    setSearch,
+    setRoleFilter,
+    handleDelete,
+    closeDeleteModal,
+    confirmDelete,
+    totalPages,
+  } = useUserManagement();
+  const { start, end } = getPaginationRange(page, pageSize, total);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -311,8 +212,8 @@ export default function UserManagementPage() {
           {totalPages > 1 && (
             <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-600">
-                Menampilkan <span className="font-medium text-slate-900">{((page - 1) * pageSize + 1) || 0}</span> -{" "}
-                <span className="font-medium text-slate-900">{Math.min(page * pageSize, total)}</span> dari{" "}
+                Menampilkan <span className="font-medium text-slate-900">{start}</span> -{" "}
+                <span className="font-medium text-slate-900">{end}</span> dari{" "}
                 <span className="font-medium text-slate-900">{total}</span> pengguna
               </p>
               <div className="flex flex-wrap items-center gap-2">

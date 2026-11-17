@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { REPORT_STATUS, PRIORITY, DAMAGE_LEVEL } from "@/lib/constants";
@@ -11,6 +12,14 @@ const MAX_MAP_POINTS = 500;
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getCurrentSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const facilityTypeId = searchParams.get("facilityTypeId");
     const status = searchParams.get("status");

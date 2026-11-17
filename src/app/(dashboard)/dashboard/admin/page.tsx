@@ -16,8 +16,7 @@ import {
 } from "lucide-react";
 import AdminCharts from "@/components/admin/AdminCharts";
 import { REPORT_STATUS_LABELS, DAMAGE_LEVEL_LABELS } from "@/lib/constants";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 
 export const metadata = {
   title: "Dashboard Admin – CirebonLapor",

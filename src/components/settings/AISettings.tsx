@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import {
@@ -116,7 +117,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
       const json = await res.json();
 
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal menyimpan konfigurasi.");
+        throw new Error(getErrorMessage(json, "Gagal menyimpan konfigurasi."));
       }
 
       const saved = json.data as AiProviderStatus;
@@ -134,7 +135,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
           isActive: saved.isActive,
         },
       }));
-      setNotice(json.message || "Konfigurasi berhasil disimpan.");
+      setNotice(getErrorMessage(json, "Konfigurasi berhasil disimpan."));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan konfigurasi.");
     } finally {
@@ -160,7 +161,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
       const json = await res.json();
 
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal memuat daftar model.");
+        throw new Error(getErrorMessage(json, "Gagal memuat daftar model."));
       }
 
       const list = (json.data?.models ?? []) as string[];
@@ -170,7 +171,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
       if (!current || !list.includes(current)) {
         patchForm(provider, { model: list[0] ?? current });
       }
-      setNotice(json.message || "Daftar model berhasil dimuat.");
+      setNotice(getErrorMessage(json, "Daftar model berhasil dimuat."));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat daftar model.");
     } finally {
@@ -203,7 +204,7 @@ export default function AISettings({ initialProviders }: AISettingsProps) {
         ...prev,
         [provider]: {
           ok: Boolean(json.success && data?.ok),
-          message: json.message || "Uji koneksi selesai.",
+          message: getErrorMessage(json, "Uji koneksi selesai."),
           latencyMs: data?.latencyMs,
           reply: data?.reply,
         },

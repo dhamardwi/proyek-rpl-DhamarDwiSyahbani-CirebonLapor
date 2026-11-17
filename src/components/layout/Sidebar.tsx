@@ -53,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/map", label: "Peta Sebaran", icon: MapPin, roles: ["ADMIN", "PETUGAS", "MASYARAKAT"] },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- parameter dipertahankan untuk kompatibilitas caller
 function isItemActive(pathname: string, item: NavItem, role?: Role) {
   if (item.match) return item.match(pathname);
   if (item.href === "/dashboard/profile") {

@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { CardTitle, CardContent } from "@/components/ui/card";
 
 export default function AddPetugasModal() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function AddPetugasModal() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Gagal menambah petugas");
+      if (!res.ok) throw new Error(getErrorMessage(data, "Gagal menambah petugas"));
 
       setIsOpen(false);
       setFormData({ name: "", email: "", password: "" });

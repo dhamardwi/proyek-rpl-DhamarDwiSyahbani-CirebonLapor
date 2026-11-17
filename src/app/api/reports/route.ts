@@ -1,36 +1,46 @@
-import { NextRequest, NextResponse, after } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { CreateReportSchema } from "@/lib/validations/report";
 import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { getAIService } from "@/lib/ai-service";
+import {
+  REPORT_UPLOAD_DIR,
+  buildReportImageFileName,
+  buildReportImagePaths,
+  isAcceptedReportImageType,
+  isOversizedReportImage,
+  parseReportFormFields,
+} from "@/lib/report-upload";
 import { computeImageHash } from "@/lib/duplicate/image-hash";
 import { processReportAfterSubmission } from "@/lib/report-ai-pipeline";
+import { scheduleReportPostSubmit } from "@/lib/report-post-submit-scheduler";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+
+    if (session.user.role !== "MASYARAKAT") {
+      return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     }
 
     const formData = await req.formData();
     
     // Parse fields
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const facilityTypeId = formData.get("facilityTypeId") as string;
-    const address = formData.get("address") as string;
-    const latitude = formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : null;
-    const longitude = formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : null;
-    
-    const file = formData.get("image") as File;
+    const fields = parseReportFormFields(formData);
+    const file = fields.file;
 
     // Validate payload texts
     const parsed = CreateReportSchema.safeParse({
-      title, description, facilityTypeId, address, latitude, longitude
+      title: fields.title,
+      description: fields.description,
+      facilityTypeId: fields.facilityTypeId,
+      address: fields.address,
+      latitude: fields.latitude,
+      longitude: fields.longitude,
     });
 
     if (!parsed.success) {
@@ -45,12 +55,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Foto kerusakan wajib diunggah" }, { status: 422 });
     }
 
-    const validTypes = ["image/jpeg", "image/png", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
+    if (!isAcceptedReportImageType(file)) {
       return NextResponse.json({ success: false, message: "Format foto harus JPG atau PNG" }, { status: 422 });
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (isOversizedReportImage(file)) {
       return NextResponse.json({ success: false, message: "Ukuran foto maksimal 5MB" }, { status: 422 });
     }
 
@@ -59,24 +68,19 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     
     // Create unique filename
-    const ext = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
-    
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "reports");
+    const fileName = buildReportImageFileName(file);
+    const { filePath, relativeImageUrl } = buildReportImagePaths(fileName);
     
     try {
-      await mkdir(uploadDir, { recursive: true });
+      await mkdir(REPORT_UPLOAD_DIR, { recursive: true });
     } catch {
       console.log("Directory exists or error creating directory");
     }
     
-    const filePath = path.join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
     // Hash perseptual untuk deteksi gambar duplikat (gagal = null, tidak fatal).
     const imageHash = await computeImageHash(buffer);
-
-    const relativeImageUrl = `/uploads/reports/${fileName}`;
 
     // Database Transaction to save Report, ReportImage, and ReportStatusHistory
     const report = await db.$transaction(async (tx) => {
@@ -125,7 +129,7 @@ export async function POST(req: NextRequest) {
     const aiService = getAIService();
     const aiQueued = await aiService.isAvailable();
 
-    after(async () => {
+    scheduleReportPostSubmit(async () => {
       await processReportAfterSubmission({
         reportId: report.id,
         userId: session.user.id,

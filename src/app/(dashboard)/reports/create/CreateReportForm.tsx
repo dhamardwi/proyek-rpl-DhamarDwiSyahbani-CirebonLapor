@@ -1,4 +1,6 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
+/* eslint-disable @next/next/no-img-element -- preview gambar upload dengan dimensi dinamis; <Image> akan mengubah layout & tampilan */
 
 import { useState, FormEvent, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -119,7 +121,7 @@ export default function CreateReportForm({ facilityTypes }: { facilityTypes: Fac
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Gagal mengirim laporan");
+        throw new Error(getErrorMessage(data, "Gagal mengirim laporan"));
       }
 
       setSuccess(true);

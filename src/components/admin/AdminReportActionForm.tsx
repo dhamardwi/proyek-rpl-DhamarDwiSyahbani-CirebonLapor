@@ -1,16 +1,15 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, UserPlus, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface AdminReportActionFormProps {
   reportId: string;
@@ -71,7 +70,7 @@ export default function AdminReportActionForm({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Gagal memproses aksi");
+      if (!res.ok) throw new Error(getErrorMessage(data, "Gagal memproses aksi"));
 
       setSuccess(data.message);
       setAction(null);

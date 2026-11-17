@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -60,7 +61,7 @@ export default function RegisterPage() {
           });
           setErrors(fieldErrors);
         } else {
-          setServerError(data.message || "Terjadi kesalahan. Silakan coba lagi.");
+          setServerError(getErrorMessage(data, "Terjadi kesalahan. Silakan coba lagi."));
         }
         return;
       }

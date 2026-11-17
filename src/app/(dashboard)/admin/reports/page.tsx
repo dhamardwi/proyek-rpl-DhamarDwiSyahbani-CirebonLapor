@@ -1,3 +1,4 @@
+import { getPaginationRange } from "@/lib/ui-helpers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -24,16 +25,6 @@ const VALID_PRIORITIES = new Set<string>(Object.values(PRIORITY));
 
 export const metadata = {
   title: "Manajemen Laporan – Admin",
-};
-
-const statusColors: Record<string, string> = {
-  MENUNGGU_VERIFIKASI: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  DIPROSES_AI: "bg-blue-100 text-blue-700 border-blue-200",
-  DITERIMA: "bg-teal-100 text-teal-700 border-teal-200",
-  DITOLAK: "bg-red-100 text-red-700 border-red-200",
-  DITUGASKAN: "bg-indigo-100 text-indigo-700 border-indigo-200",
-  SEDANG_DIPERBAIKI: "bg-orange-100 text-orange-700 border-orange-200",
-  SELESAI: "bg-green-100 text-green-700 border-green-200",
 };
 
 const priorityColors: Record<string, string> = {
@@ -100,7 +91,7 @@ export default async function AdminReportsPage({
     db.facilityType.findMany({ orderBy: { name: "asc" } }),
   ]);
 
-  const totalPages = Math.ceil(total / perPage);
+  const { totalPages, start, end } = getPaginationRange(page, perPage, total);
   const priorityQuery = priorityFilter.length > 0 ? `&priority=${priorityFilter.join(",")}` : "";
 
   const baseQuery = [
@@ -293,8 +284,8 @@ export default async function AdminReportsPage({
           {totalPages > 1 && (
             <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-600">
-                Menampilkan <span className="font-medium text-slate-900">{((page - 1) * perPage + 1) || 0}</span> -{" "}
-                <span className="font-medium text-slate-900">{Math.min(page * perPage, total)}</span> dari{" "}
+                Menampilkan <span className="font-medium text-slate-900">{start}</span> -{" "}
+                <span className="font-medium text-slate-900">{end}</span> dari{" "}
                 <span className="font-medium text-slate-900">{total}</span> laporan
               </p>
               <div className="flex flex-wrap items-center gap-2">

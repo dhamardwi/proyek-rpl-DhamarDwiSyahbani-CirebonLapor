@@ -85,6 +85,7 @@ export function normalizeBaseUrl(
 export function normalizeModel(
   value: string | null | undefined,
   fallback: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- parameter dummy, nilai tidak dipakai
   _provider: AiProvider
 ): string {
   return (value ?? "").trim() || fallback;

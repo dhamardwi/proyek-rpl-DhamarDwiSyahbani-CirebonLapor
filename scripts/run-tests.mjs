@@ -9,6 +9,7 @@ const testFiles = [
   "tests/whatsapp-linking.test.ts",
   "tests/whatsapp-outbox.test.ts",
   "tests/whatsapp-role-notifications.test.ts",
+  "tests/rbac-api.test.ts",
 ];
 
 function run(args) {

@@ -55,6 +55,7 @@ export class AIAnalysisService {
   }
 
   /** Analisis foto AI dinonaktifkan; selalu mengembalikan null. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- parameter dummy, AI dinonaktifkan
   async analyzeImage(_imagePath: string): Promise<AIAnalysisResult | null> {
     return null;
   }

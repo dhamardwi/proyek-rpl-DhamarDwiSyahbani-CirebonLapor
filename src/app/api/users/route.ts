@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { DELETED_USER_EMAIL } from "@/lib/constants";
 import { maskWhatsappNumber } from "@/lib/whatsapp/config";
@@ -12,7 +11,7 @@ import { maskWhatsappNumber } from "@/lib/whatsapp/config";
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

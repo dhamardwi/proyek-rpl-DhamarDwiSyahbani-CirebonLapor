@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -52,9 +53,9 @@ export default function WhatsAppLinkSection({
       const res = await fetch("/api/settings/whatsapp", { method: "DELETE" });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || "Gagal memutuskan koneksi WhatsApp.");
+        throw new Error(getErrorMessage(json, "Gagal memutuskan koneksi WhatsApp."));
       }
-      setNotice(json.message || "Koneksi WhatsApp berhasil diputuskan.");
+      setNotice(getErrorMessage(json, "Koneksi WhatsApp berhasil diputuskan."));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memutuskan koneksi WhatsApp.");

@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { noStore } from "@/lib/api-response";
 import { isFonnteConfigured } from "@/lib/whatsapp/config";
 import {
   disconnectWhatsapp,
@@ -10,13 +11,6 @@ import {
 } from "@/lib/whatsapp/linking";
 
 export const dynamic = "force-dynamic";
-
-function noStore(body: unknown, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
 
 function forbiddenForStaff(role: string | undefined): boolean {
   return role === "ADMIN" || role === "PETUGAS";

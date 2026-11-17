@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- gambar upload dengan dimensi dinamis; <Image> akan mengubah layout & tampilan */
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
@@ -27,16 +28,6 @@ import AIAnalysisCard from "@/components/admin/AIAnalysisCard";
 import DuplicateReportCard from "@/components/admin/DuplicateReportCard";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const statusColors: Record<string, string> = {
-  MENUNGGU_VERIFIKASI: "bg-yellow-100 text-yellow-700",
-  DIPROSES_AI: "bg-blue-100 text-blue-700",
-  DITERIMA: "bg-teal-100 text-teal-700",
-  DITOLAK: "bg-red-100 text-red-700",
-  DITUGASKAN: "bg-indigo-100 text-indigo-700",
-  SEDANG_DIPERBAIKI: "bg-orange-100 text-orange-700",
-  SELESAI: "bg-green-100 text-green-700",
-};
 
 const priorityBadge: Record<string, string> = {
   RENDAH: "bg-slate-100 text-slate-600",

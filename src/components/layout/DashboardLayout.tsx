@@ -3,7 +3,7 @@
 import { PropsWithChildren, useState } from "react";
 import Sidebar from "./Sidebar";
 import NotificationDropdown from "@/components/shared/NotificationDropdown";
-import { User, Settings, Bell, Menu, LogOut } from "lucide-react";
+import { User, Settings, Menu, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
@@ -19,7 +19,6 @@ export default function DashboardLayout({ children }: PropsWithChildren<Dashboar
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  const role = session?.user?.role as string | undefined;
   const isLoading = status === "loading";
 
   const handleLogout = () => {

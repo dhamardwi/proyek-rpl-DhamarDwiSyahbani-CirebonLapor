@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { maskWhatsappNumber } from "@/lib/whatsapp/config";
 import { DELETED_USER_EMAIL } from "@/lib/constants";
@@ -12,7 +11,7 @@ import { z } from "zod";
  */
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -97,7 +96,7 @@ export async function GET() {
  */
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

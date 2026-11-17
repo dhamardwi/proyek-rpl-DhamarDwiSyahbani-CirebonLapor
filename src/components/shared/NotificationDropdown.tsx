@@ -1,11 +1,10 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Clock } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface Notification {
   id: string;
@@ -49,7 +48,7 @@ export default function NotificationDropdown() {
           setNotifications(json.data);
           setUnreadCount(json.unreadCount);
         } else if (!cancelled) {
-          throw new Error(json.message || "Gagal memuat notifikasi");
+          throw new Error(getErrorMessage(json, "Gagal memuat notifikasi"));
         }
       } catch (error) {
         if (controller.signal.aborted) return;

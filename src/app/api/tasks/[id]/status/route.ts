@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { notifyTaskStatusChanged } from "@/lib/report-notification-service";
+import {
+  REPORT_UPLOAD_DIR,
+  buildReportImageFileName,
+  buildReportImagePaths,
+  isAcceptedReportImageType,
+  isOversizedReportImage,
+} from "@/lib/report-upload";
+
+const ALLOWED_TASK_TRANSITIONS: Record<string, string[]> = {
+  DITUGASKAN: ["SEDANG_DIPERBAIKI"],
+  SEDANG_DIPERBAIKI: ["SELESAI"],
+};
 
 export async function PATCH(
   req: NextRequest,
@@ -12,7 +22,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
@@ -41,12 +51,7 @@ export async function PATCH(
     const image = formData.get("image") as File | null;
 
     // Validasi transisi status yang diizinkan untuk petugas
-    const allowedTransitions: Record<string, string[]> = {
-      DITUGASKAN: ["SEDANG_DIPERBAIKI"],
-      SEDANG_DIPERBAIKI: ["SELESAI"],
-    };
-
-    const allowed = allowedTransitions[report.status];
+    const allowed = ALLOWED_TASK_TRANSITIONS[report.status];
     if (!allowed || !allowed.includes(newStatus)) {
       return NextResponse.json(
         { success: false, message: `Tidak dapat mengubah status dari ${report.status} ke ${newStatus}` },
@@ -65,28 +70,26 @@ export async function PATCH(
     // Simpan foto bukti perbaikan jika ada
     let relativeImageUrl: string | null = null;
     if (image) {
-      const validTypes = ["image/jpeg", "image/png", "image/jpg"];
-      if (!validTypes.includes(image.type)) {
+      if (!isAcceptedReportImageType(image)) {
         return NextResponse.json({ success: false, message: "Format foto harus JPG atau PNG" }, { status: 422 });
       }
-      if (image.size > 5 * 1024 * 1024) {
+      if (isOversizedReportImage(image)) {
         return NextResponse.json({ success: false, message: "Ukuran foto maksimal 5MB" }, { status: 422 });
       }
 
       const bytes = await image.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const ext = image.name.split(".").pop();
-      const fileName = `bukti-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "reports");
+      const fileName = buildReportImageFileName(image, "bukti-");
+      const paths = buildReportImagePaths(fileName);
 
       try {
-        await mkdir(uploadDir, { recursive: true });
+        await mkdir(REPORT_UPLOAD_DIR, { recursive: true });
       } catch {
         // Directory already exists
       }
 
-      await writeFile(path.join(uploadDir, fileName), buffer);
-      relativeImageUrl = `/uploads/reports/${fileName}`;
+      await writeFile(paths.filePath, buffer);
+      relativeImageUrl = paths.relativeImageUrl;
     }
 
     // Database Transaction

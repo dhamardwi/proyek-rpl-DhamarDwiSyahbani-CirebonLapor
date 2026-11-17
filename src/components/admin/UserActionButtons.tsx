@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,7 +23,7 @@ export function ToggleUserStatus({ userId, isActive, currentRole }: { userId: st
         router.refresh();
       } else {
         const data = await res.json();
-        alert(data.message || "Gagal mengubah status user");
+        alert(getErrorMessage(data, "Gagal mengubah status user"));
       }
     } catch {
       alert("Terjadi kesalahan sistem");

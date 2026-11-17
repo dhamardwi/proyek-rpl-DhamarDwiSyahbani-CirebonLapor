@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { notifyAdminReportAction } from "@/lib/report-notification-service";
+import { isValidationError } from "@/lib/api-response";
 
 type AdminAction = "VERIFY" | "REJECT" | "ASSIGN" | "PRIORITY";
 
 const ALLOWED_PRIORITIES = ["RENDAH", "SEDANG", "TINGGI", "KRITIS"] as const;
+const VERIFY_FROM = ["MENUNGGU_VERIFIKASI", "DIPROSES_AI", "DITOLAK"];
+const REJECT_FROM = ["MENUNGGU_VERIFIKASI", "DIPROSES_AI", "DITERIMA"];
+const ADMIN_ACTION_MESSAGES: Record<AdminAction, string> = {
+  VERIFY: "Laporan berhasil diverifikasi",
+  REJECT: "Laporan berhasil ditolak",
+  ASSIGN: "Petugas berhasil ditugaskan",
+  PRIORITY: "Prioritas berhasil diubah",
+};
 
 export async function PATCH(
   req: NextRequest,
@@ -14,7 +22,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     }
@@ -38,8 +46,13 @@ export async function PATCH(
     // Admin memegang kendali penuh manual, termasuk override keputusan AI:
     // - VERIFY dari MENUNGGU_VERIFIKASI / DIPROSES_AI / DITOLAK (koreksi penolakan AI)
     // - REJECT dari MENUNGGU_VERIFIKASI / DIPROSES_AI / DITERIMA (koreksi penerimaan AI)
-    const VERIFY_FROM = ["MENUNGGU_VERIFIKASI", "DIPROSES_AI", "DITOLAK"];
-    const REJECT_FROM = ["MENUNGGU_VERIFIKASI", "DIPROSES_AI", "DITERIMA"];
+
+    if (action === "PRIORITY" && (report.status === "SELESAI" || report.status === "DITOLAK")) {
+      return NextResponse.json(
+        { success: false, message: "Prioritas tidak dapat diubah pada laporan yang sudah selesai atau ditolak" },
+        { status: 422 }
+      );
+    }
 
     const updated = await db.$transaction(async (tx) => {
       if (action === "VERIFY") {
@@ -138,27 +151,15 @@ export async function PATCH(
       });
     }
 
-    const messages: Record<AdminAction, string> = {
-      VERIFY: "Laporan berhasil diverifikasi",
-      REJECT: "Laporan berhasil ditolak",
-      ASSIGN: "Petugas berhasil ditugaskan",
-      PRIORITY: "Prioritas berhasil diubah",
-    };
-
     return NextResponse.json({
       success: true,
-      message: messages[action] ?? "Berhasil memproses laporan",
+      message: ADMIN_ACTION_MESSAGES[action] ?? "Berhasil memproses laporan",
       data: updated,
     });
   } catch (error: unknown) {
     console.error("[ADMIN_UPDATE_REPORT_ERROR]", error);
     const message = error instanceof Error ? error.message : "Terjadi kesalahan server";
-    const isValidation =
-      message.includes("tidak valid") ||
-      message.includes("tidak bisa") ||
-      message.includes("Hanya") ||
-      message.includes("harus") ||
-      message.includes("nonaktif");
+    const isValidation = isValidationError(message);
     return NextResponse.json(
       { success: false, message },
       { status: isValidation ? 422 : 500 }

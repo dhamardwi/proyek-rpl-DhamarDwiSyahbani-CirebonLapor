@@ -1,78 +1,18 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useProfileData, type ProfileData } from "@/hooks/use-profile-data";
 import Link from "next/link";
 import ProfileForm from "@/components/profile/ProfileForm";
 import PasswordForm from "@/components/profile/PasswordForm";
 import WhatsAppLinkSection from "@/components/profile/WhatsAppLinkSection";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-interface ProfileData {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  phone: string;
-  address: string;
-  isActive: boolean;
-  reportCount: number;
-  taskCount: number;
-  createdAt: string;
-  updatedAt: string;
-  whatsapp: {
-    connected: boolean;
-    maskedPhoneNumber: string | null;
-    verifiedAt: string | null;
-    registrationStatus: string | null;
-  };
-}
-
 interface ProfileClientProps {
   initialData: ProfileData;
 }
 
 export default function ProfileClient({ initialData }: ProfileClientProps) {
-  const { data: session } = useSession();
-  const [profile, setProfile] = useState<ProfileData | null>(initialData);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchProfile = useCallback(async () => {
-    try {
-      const res = await fetch("/api/profile");
-      const data = await res.json();
-      if (data.success && data.data) {
-        setProfile(data.data);
-      }
-    } catch (error) {
-      console.error("[PROFILE_FETCH_ERROR]", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
-  const handleProfileUpdate = async (data: {
-    name: string;
-    email: string;
-    phone: string | null;
-    address: string | null;
-  }) => {
-    const res = await fetch("/api/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const result = await res.json();
-    if (!res.ok || !result.success) {
-      throw new Error(result.message || "Gagal memperbarui profil");
-    }
-    await fetchProfile();
-    return result.data;
-  };
+  const { session, profile, isLoading, handleProfileUpdate } = useProfileData(initialData);
 
   if (!session?.user || session.user.role !== "MASYARAKAT" || !profile) {
     return (

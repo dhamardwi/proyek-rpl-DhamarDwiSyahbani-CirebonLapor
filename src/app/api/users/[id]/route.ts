@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 import { DELETED_USER_EMAIL, DELETED_USER_NAME } from "@/lib/constants";
 
@@ -21,7 +20,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },

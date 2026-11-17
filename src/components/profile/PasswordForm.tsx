@@ -1,4 +1,5 @@
 "use client";
+import { getErrorMessage } from "@/lib/ui-helpers";
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
@@ -84,7 +85,7 @@ export default function PasswordForm({ isLoading }: PasswordFormProps) {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 5000);
       } else {
-        const msg = data.message || "Gagal mengubah password";
+        const msg = getErrorMessage(data, "Gagal mengubah password");
         if (msg.includes("saat ini")) {
           setErrors({ currentPassword: msg });
         } else if (msg.includes("baru")) {

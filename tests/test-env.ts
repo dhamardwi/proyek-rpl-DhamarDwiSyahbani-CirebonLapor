@@ -1,3 +1,4 @@
+(process.env as Record<string, string | undefined>).NODE_ENV = "test";
 process.env.DATABASE_URL = "file:./test-whatsapp.db";
 process.env.FONNTE_API_TOKEN = "test-fonnte-token";
 process.env.FONNTE_API_URL = "https://api.fonnte.com/send";

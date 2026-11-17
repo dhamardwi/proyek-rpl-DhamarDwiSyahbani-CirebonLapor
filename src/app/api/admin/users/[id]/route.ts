@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
 import db from "@/lib/db";
 
 // PATCH: Toggle isActive user
@@ -10,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const session = await getCurrentSession();
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     }

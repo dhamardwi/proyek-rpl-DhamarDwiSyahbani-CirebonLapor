@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- gambar upload dengan dimensi dinamis; <Image> akan mengubah layout & tampilan */
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";

@@ -5,8 +5,7 @@ import db from "@/lib/db";
 import Link from "next/link";
 import { FileText, Clock, CheckCircle, PlusCircle, AlertCircle } from "lucide-react";
 import { REPORT_STATUS_LABELS, type ReportStatus } from "@/lib/constants";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export const metadata = {
   title: "Dashboard Masyarakat – CirebonLapor",

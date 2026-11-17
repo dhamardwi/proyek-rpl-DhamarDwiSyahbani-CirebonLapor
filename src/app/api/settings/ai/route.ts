@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth-session";
+import { noStore } from "@/lib/api-response";
 import {
   getAiProviderStatuses,
   saveAiConfig,
@@ -9,15 +8,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function noStore(body: unknown, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
-
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user) {
     return { error: noStore({ success: false, message: "Unauthorized" }, 401) };
   }
