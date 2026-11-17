@@ -2,14 +2,14 @@
 
 ## 1. Identitas
 
-| Keterangan            | Isi                                                                                           |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| **Nama**              | Dhamar Dwi Syahbani                                                                           |
-| **NIM**               | 41257098                                                                                      |
-| **Kelompok**          | RPL-01                                                                                        |
-| **Tema**              | Smart City & Civic Technology                                                                 |
-| **Topik**             | Sistem Pelaporan & Monitoring Fasilitas Umum Berbasis AI                                      |
-| **Repositori GitHub** | `username/proyek-rpl-nama-aplikasi` → `[https://github.com/username/proyek-rpl-cirebonlapor]` |
+| Keterangan            | Isi                                                                    |
+| --------------------- | ---------------------------------------------------------------------- |
+| **Nama**              | Dhamar Dwi Syahbani                                                    |
+| **NIM**               | 41257098                                                               |
+| **Kelompok**          | RPL-01                                                                 |
+| **Tema**              | Smart City & Civic Technology                                          |
+| **Topik**             | Sistem Pelaporan & Monitoring Fasilitas Umum Berbasis AI               |
+| **Repositori GitHub** | https://github.com/dhamardwi/proyek-rpl-DhamarDwiSyahbani-CirebonLapor |
 
 ---
 
@@ -46,7 +46,7 @@ CirebonLapor adalah aplikasi web pelaporan fasilitas umum di Kota Cirebon. Masya
 
 ```bash
 # 1. Clone repositori
-git clone https://github.com/dhamardwi/proyek-rpl-DhamarDwiSyahbani-cirebonlapor.git
+git clone https://github.com/dhamardwi/proyek-rpl-DhamarDwiSyahbani-CirebonLapor.git
 cd proyek-rpl-cirebonlapor
 
 # 2. Instal dependensi
