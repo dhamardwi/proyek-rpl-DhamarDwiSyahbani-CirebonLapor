@@ -10,6 +10,7 @@
 | **Tema**              | Smart City & Civic Technology                                          |
 | **Topik**             | Sistem Pelaporan & Monitoring Fasilitas Umum Berbasis AI               |
 | **Repositori GitHub** | https://github.com/dhamardwi/proyek-rpl-DhamarDwiSyahbani-CirebonLapor |
+| **Link Video Demo**   | https://youtu.be/JPmSAc1cV1k                                           |
 
 ---
 
