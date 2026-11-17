@@ -48,7 +48,7 @@ CirebonLapor adalah aplikasi web pelaporan fasilitas umum di Kota Cirebon. Masya
 ```bash
 # 1. Clone repositori
 git clone https://github.com/dhamardwi/proyek-rpl-DhamarDwiSyahbani-CirebonLapor.git
-cd proyek-rpl-cirebonlapor
+cd proyek-rpl-DhamarDwiSyahbani-cirebonlapor
 
 # 2. Instal dependensi
 npm ci
